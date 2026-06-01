@@ -1,0 +1,70 @@
+import { Link, useNavigate } from 'react-router-dom';
+import { useAuthStore } from '../../store/authStore';
+
+export default function Header() {
+  const { isAuthenticated, user, logout } = useAuthStore();
+  const navigate = useNavigate();
+
+  const handleLogout = () => {
+    logout();
+    navigate('/');
+  };
+
+  return (
+    <header className="bg-white shadow-sm border-b">
+      <div className="container mx-auto px-4 max-w-5xl">
+        <div className="flex items-center justify-between h-14">
+          <Link to="/" className="text-xl font-bold text-gray-800 no-underline">
+            My Blog
+          </Link>
+
+          <nav className="flex items-center gap-4 text-sm">
+            <Link to="/blogs" className="text-gray-600 hover:text-gray-900 no-underline">
+              Blogs
+            </Link>
+            <Link to="/friends" className="text-gray-600 hover:text-gray-900 no-underline">
+              Friends
+            </Link>
+            <Link to="/guestbook" className="text-gray-600 hover:text-gray-900 no-underline">
+              Guestbook
+            </Link>
+            <Link to="/trending" className="text-gray-600 hover:text-gray-900 no-underline">
+              Trending
+            </Link>
+
+            <div className="ml-4 flex items-center gap-3">
+              {isAuthenticated ? (
+                <>
+                  <Link to="/blogs/create" className="text-blue-600 hover:text-blue-800 no-underline font-medium">
+                    Write
+                  </Link>
+                  <Link to="/profile" className="text-gray-600 hover:text-gray-900 no-underline">
+                    {user?.display_name || user?.username}
+                  </Link>
+                  <button
+                    onClick={handleLogout}
+                    className="text-gray-500 hover:text-gray-700 bg-transparent border-none cursor-pointer"
+                  >
+                    Logout
+                  </button>
+                </>
+              ) : (
+                <>
+                  <Link to="/login" className="text-gray-600 hover:text-gray-900 no-underline">
+                    Login
+                  </Link>
+                  <Link
+                    to="/register"
+                    className="bg-blue-600 text-white px-3 py-1.5 rounded-md hover:bg-blue-700 no-underline text-sm"
+                  >
+                    Register
+                  </Link>
+                </>
+              )}
+            </div>
+          </nav>
+        </div>
+      </div>
+    </header>
+  );
+}
