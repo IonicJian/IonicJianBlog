@@ -20,7 +20,6 @@ type Handlers struct {
 }
 
 func Setup(r *gin.Engine, h *Handlers, cfg *config.Config) {
-	// Middleware
 	r.Use(middleware.Recovery())
 	r.Use(middleware.CORS(cfg.Server.FrontendURL))
 	r.Use(middleware.Logger())
@@ -42,7 +41,7 @@ func Setup(r *gin.Engine, h *Handlers, cfg *config.Config) {
 		auth.GET("/github/callback", h.Auth.GitHubCallback)
 	}
 
-	// Auth-protected routes
+	// Auth-protected routes (any logged-in user)
 	authRequired := api.Group("")
 	authRequired.Use(middleware.RequiredAuth(cfg.JWT.Secret))
 	{
@@ -50,10 +49,6 @@ func Setup(r *gin.Engine, h *Handlers, cfg *config.Config) {
 		authRequired.GET("/users/me", h.Auth.GetProfile)
 		authRequired.PUT("/users/me", h.Auth.UpdateProfile)
 		authRequired.PUT("/users/me/avatar", h.Auth.UpdateProfile)
-
-		authRequired.POST("/blogs", h.Blog.Create)
-		authRequired.PUT("/blogs/:id", h.Blog.Update)
-		authRequired.DELETE("/blogs/:id", h.Blog.Delete)
 
 		authRequired.POST("/blogs/:id/comments", h.Comment.Create)
 		authRequired.DELETE("/comments/:id", h.Comment.Delete)
@@ -67,10 +62,14 @@ func Setup(r *gin.Engine, h *Handlers, cfg *config.Config) {
 		authRequired.DELETE("/guestbook/:id", h.Guestbook.Delete)
 	}
 
-	// Admin-only routes
+	// Admin-only routes (blog CRUD, tags, friend links, AI)
 	adminRequired := api.Group("")
 	adminRequired.Use(middleware.RequiredAuth(cfg.JWT.Secret), middleware.RequireAdmin())
 	{
+		adminRequired.POST("/blogs", h.Blog.Create)
+		adminRequired.PUT("/blogs/:id", h.Blog.Update)
+		adminRequired.DELETE("/blogs/:id", h.Blog.Delete)
+
 		adminRequired.POST("/tags", h.Tag.Create)
 		adminRequired.PUT("/tags/:id", h.Tag.Update)
 		adminRequired.DELETE("/tags/:id", h.Tag.Delete)
@@ -89,6 +88,7 @@ func Setup(r *gin.Engine, h *Handlers, cfg *config.Config) {
 		optionalAuth.GET("/blogs/top", h.Blog.GetTop)
 		optionalAuth.GET("/blogs/:id", h.Blog.GetByID)
 		optionalAuth.GET("/blogs/slug/:slug", h.Blog.GetBySlug)
+		optionalAuth.POST("/blogs/:id/view", h.Blog.IncrementView)
 		optionalAuth.GET("/blogs/:id/comments", h.Comment.List)
 		optionalAuth.GET("/tags", h.Tag.List)
 		optionalAuth.GET("/friend-links", h.FriendLink.List)

@@ -14,6 +14,8 @@ import (
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 
+	"golang.org/x/crypto/bcrypt"
+
 	"github.com/zanelin/blog/internal/config"
 	"github.com/zanelin/blog/internal/handler"
 	"github.com/zanelin/blog/internal/repository"
@@ -22,20 +24,16 @@ import (
 )
 
 func main() {
-	// Logger setup
 	zerolog.TimeFieldFormat = zerolog.TimeFormatUnix
 	log.Logger = log.Output(zerolog.ConsoleWriter{Out: os.Stdout, TimeFormat: time.RFC3339})
 
-	// Load config
 	cfg, err := config.Load()
 	if err != nil {
 		log.Fatal().Err(err).Msg("failed to load config")
 	}
 
-	// Set Gin mode
 	gin.SetMode(cfg.Server.Mode)
 
-	// Connect to database
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 
@@ -50,41 +48,67 @@ func main() {
 	}
 	log.Info().Msg("connected to database")
 
-	// Run migrations
 	if err := runMigrations(dbPool); err != nil {
 		log.Fatal().Err(err).Msg("failed to run migrations")
 	}
 
+	adminEmail := os.Getenv("ADMIN_EMAIL")
+	if adminEmail == "" {
+		adminEmail = "admin@blog.local"
+	}
+	adminPassword := os.Getenv("ADMIN_PASSWORD")
+	if adminPassword == "" {
+		adminPassword = "admin123"
+	}
+	if err := seedAdmin(dbPool, adminEmail, adminPassword); err != nil {
+		log.Fatal().Err(err).Msg("failed to seed admin user")
+	}
+
 	// Initialize repositories
 	userRepo := repository.NewUserRepository(dbPool)
+	blogRepo := repository.NewBlogRepository(dbPool)
+	tagRepo := repository.NewTagRepository(dbPool)
+	commentRepo := repository.NewCommentRepository(dbPool)
+	likeRepo := repository.NewLikeRepository(dbPool)
+	friendLinkRepo := repository.NewFriendLinkRepository(dbPool)
+	guestbookRepo := repository.NewGuestbookRepository(dbPool)
 
 	// Initialize services
 	authService := service.NewAuthService(userRepo, cfg)
+	tagService := service.NewTagService(tagRepo)
+	blogService := service.NewBlogService(blogRepo, tagRepo)
+	commentService := service.NewCommentService(commentRepo)
+	likeService := service.NewLikeService(likeRepo)
+	friendLinkService := service.NewFriendLinkService(friendLinkRepo)
+	guestbookService := service.NewGuestbookService(guestbookRepo)
+	trendingService := service.NewTrendingService()
+
+	// Start trending refresh cron (every hour)
+	go func() {
+		for {
+			time.Sleep(1 * time.Hour)
+			trendingService.Refresh()
+		}
+	}()
 
 	// Initialize handlers
 	h := &router.Handlers{
-		Auth:       handler.NewAuthHandler(authService),
+		Auth:       handler.NewAuthHandler(authService, cfg),
 		User:       handler.NewUserHandler(),
-		Blog:       handler.NewBlogHandler(),
-		Comment:    handler.NewCommentHandler(),
-		Like:       handler.NewLikeHandler(),
-		Tag:        handler.NewTagHandler(),
-		FriendLink: handler.NewFriendLinkHandler(),
-		Guestbook:  handler.NewGuestbookHandler(),
-		AI:         handler.NewAIHandler(),
+		Blog:       handler.NewBlogHandler(blogService),
+		Comment:    handler.NewCommentHandler(commentService),
+		Like:       handler.NewLikeHandler(likeService),
+		Tag:        handler.NewTagHandler(tagService),
+		FriendLink: handler.NewFriendLinkHandler(friendLinkService),
+		Guestbook:  handler.NewGuestbookHandler(guestbookService),
+		AI:         handler.NewAIHandler(trendingService),
 	}
 
-	// Setup router
 	r := gin.New()
 	router.Setup(r, h, cfg)
 
-	// Create server
-	srv := &http.Server{
-		Addr:    cfg.Server.Port,
-		Handler: r,
-	}
+	srv := &http.Server{Addr: cfg.Server.Port, Handler: r}
 
-	// Graceful shutdown
 	go func() {
 		log.Info().Str("port", cfg.Server.Port).Msg("starting server")
 		if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
@@ -102,15 +126,10 @@ func main() {
 	if err := srv.Shutdown(ctx); err != nil {
 		log.Fatal().Err(err).Msg("server forced to shutdown")
 	}
-
 	log.Info().Msg("server stopped")
 }
 
 func runMigrations(pool *pgxpool.Pool) error {
-	// Run migrations using embedded SQL files or manual execution.
-	// For simplicity in Phase 1, we attempt to run each migration file in order.
-	// In production, use golang-migrate with the migrations directory.
-
 	migrations := []struct {
 		name string
 		sql  string
@@ -123,9 +142,9 @@ func runMigrations(pool *pgxpool.Pool) error {
 		{"000006_create_friend_links_table", createFriendLinksTable},
 		{"000007_create_guestbook_table", createGuestbookTable},
 		{"000008_create_ai_summaries_table", createAISummariesTable},
+		{"000009_enable_pg_trgm", `CREATE EXTENSION IF NOT EXISTS pg_trgm`},
 	}
 
-	// Create migrations tracking table
 	_, err := pool.Exec(context.Background(),
 		`CREATE TABLE IF NOT EXISTS schema_migrations (
 			version VARCHAR(255) PRIMARY KEY,
@@ -142,29 +161,22 @@ func runMigrations(pool *pgxpool.Pool) error {
 		if err != nil {
 			return fmt.Errorf("failed to check migration %s: %w", m.name, err)
 		}
-
 		if exists {
 			continue
 		}
-
 		_, err = pool.Exec(context.Background(), m.sql)
 		if err != nil {
 			return fmt.Errorf("failed to apply migration %s: %w", m.name, err)
 		}
-
-		_, err = pool.Exec(context.Background(),
-			"INSERT INTO schema_migrations (version) VALUES ($1)", m.name)
+		_, err = pool.Exec(context.Background(), "INSERT INTO schema_migrations (version) VALUES ($1)", m.name)
 		if err != nil {
 			return fmt.Errorf("failed to record migration %s: %w", m.name, err)
 		}
-
 		log.Info().Str("migration", m.name).Msg("applied migration")
 	}
-
 	return nil
 }
 
-// Embedded migration SQL for simplicity in Phase 1
 const createUsersTable = `
 CREATE TABLE IF NOT EXISTS users (
     id              BIGSERIAL       PRIMARY KEY,
@@ -298,3 +310,35 @@ CREATE TABLE IF NOT EXISTS ai_summaries (
 );
 CREATE INDEX IF NOT EXISTS idx_ai_summaries_blog_id ON ai_summaries(blog_id);
 `
+
+func seedAdmin(pool *pgxpool.Pool, email, password string) error {
+	ctx := context.Background()
+
+	var count int64
+	err := pool.QueryRow(ctx, "SELECT COUNT(*) FROM users WHERE role = 'admin'").Scan(&count)
+	if err != nil {
+		return fmt.Errorf("seedAdmin: check existing admin: %w", err)
+	}
+	if count > 0 {
+		log.Info().Msg("admin user already exists, skipping seed")
+		return nil
+	}
+
+	hash, err := bcrypt.GenerateFromPassword([]byte(password), 12)
+	if err != nil {
+		return fmt.Errorf("seedAdmin: hash password: %w", err)
+	}
+
+	_, err = pool.Exec(ctx,
+		`INSERT INTO users (username, email, password_hash, display_name, role, is_active)
+		 VALUES ($1, $2, $3, $4, 'admin', true)
+		 ON CONFLICT (email) DO NOTHING`,
+		"admin", email, string(hash), "Admin",
+	)
+	if err != nil {
+		return fmt.Errorf("seedAdmin: insert admin: %w", err)
+	}
+
+	log.Info().Str("email", email).Msg("seeded admin user")
+	return nil
+}

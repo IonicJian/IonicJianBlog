@@ -14,6 +14,7 @@ interface AuthState {
   logout: () => void;
   refreshSession: () => Promise<void>;
   fetchProfile: () => Promise<void>;
+  handleOAuthCallback: (accessToken: string, refreshToken: string) => void;
   init: () => void;
 }
 
@@ -90,5 +91,17 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       get().logout();
       set({ isLoading: false });
     }
+  },
+
+  handleOAuthCallback: (accessToken: string, refreshToken: string) => {
+    localStorage.setItem('access_token', accessToken);
+    localStorage.setItem('refresh_token', refreshToken);
+    set({ accessToken, refreshToken, isAuthenticated: true, isLoading: false });
+    // Fetch profile to get user info
+    authApi.getProfile().then((res) => {
+      set({ user: res.data.data });
+    }).catch(() => {
+      get().logout();
+    });
   },
 }));

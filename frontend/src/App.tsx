@@ -12,15 +12,19 @@ import ProfilePage from './pages/ProfilePage';
 import FriendLinksPage from './pages/FriendLinksPage';
 import GuestbookPage from './pages/GuestbookPage';
 import TrendingPage from './pages/TrendingPage';
+import OAuthCallbackPage from './pages/OAuthCallbackPage';
 import NotFoundPage from './pages/NotFoundPage';
 import { useAuthStore } from './store/authStore';
+import { useUIStore } from './store/uiStore';
 
 function App() {
   const init = useAuthStore((s) => s.init);
+  const initTheme = useUIStore((s) => s.initTheme);
 
   useEffect(() => {
     init();
-  }, [init]);
+    initTheme();
+  }, [init, initTheme]);
 
   return (
     <BrowserRouter>
@@ -37,6 +41,7 @@ function App() {
           <Route path="/friends" element={<FriendLinksPage />} />
           <Route path="/guestbook" element={<GuestbookPage />} />
           <Route path="/trending" element={<TrendingPage />} />
+          <Route path="/auth/callback" element={<OAuthCallbackPage />} />
           <Route path="*" element={<NotFoundPage />} />
         </Route>
       </Routes>

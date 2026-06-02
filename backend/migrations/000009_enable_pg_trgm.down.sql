@@ -1,0 +1,1 @@
+-- Don't drop extension, it may be used by other apps

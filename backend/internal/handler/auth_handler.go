@@ -2,9 +2,11 @@ package handler
 
 import (
 	"errors"
+	"fmt"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
+	"github.com/zanelin/blog/internal/config"
 	"github.com/zanelin/blog/internal/dto/request"
 	dto "github.com/zanelin/blog/internal/dto/response"
 	"github.com/zanelin/blog/internal/middleware"
@@ -15,10 +17,11 @@ import (
 
 type AuthHandler struct {
 	authService service.AuthService
+	cfg         *config.Config
 }
 
-func NewAuthHandler(authService service.AuthService) *AuthHandler {
-	return &AuthHandler{authService: authService}
+func NewAuthHandler(authService service.AuthService, cfg *config.Config) *AuthHandler {
+	return &AuthHandler{authService: authService, cfg: cfg}
 }
 
 func (h *AuthHandler) Register(c *gin.Context) {
@@ -97,13 +100,38 @@ func (h *AuthHandler) Logout(c *gin.Context) {
 }
 
 func (h *AuthHandler) GitHubLogin(c *gin.Context) {
-	// TODO: Implement in Phase 4
-	resp.Error(c, http.StatusNotImplemented, 501, "GitHub login not yet implemented")
+	authURL, state := h.authService.GetGitHubAuthURL()
+	// Store state in cookie for CSRF validation
+	c.SetCookie("oauth_state", state, 600, "/", "", false, true)
+	c.Redirect(http.StatusTemporaryRedirect, authURL)
 }
 
 func (h *AuthHandler) GitHubCallback(c *gin.Context) {
-	// TODO: Implement in Phase 4
-	resp.Error(c, http.StatusNotImplemented, 501, "GitHub login not yet implemented")
+	code := c.Query("code")
+	state := c.Query("state")
+	if code == "" {
+		resp.BadRequest(c, "missing code")
+		return
+	}
+
+	// Validate state
+	cookieState, _ := c.Cookie("oauth_state")
+	if state == "" || cookieState == "" || state != cookieState {
+		resp.Error(c, http.StatusForbidden, 403, "invalid oauth state")
+		return
+	}
+
+	user, tokens, err := h.authService.GitHubCallback(c.Request.Context(), code, state)
+	if err != nil {
+		c.Redirect(http.StatusTemporaryRedirect, fmt.Sprintf("%s/login?error=github_auth_failed", h.cfg.Server.FrontendURL))
+		return
+	}
+
+	// Redirect to frontend with tokens
+	redirectURL := fmt.Sprintf("%s/auth/callback?access_token=%s&refresh_token=%s&user_id=%d&role=%s",
+		h.cfg.Server.FrontendURL, tokens.AccessToken, tokens.RefreshToken, user.ID, user.Role)
+
+	c.Redirect(http.StatusTemporaryRedirect, redirectURL)
 }
 
 func (h *AuthHandler) GetProfile(c *gin.Context) {

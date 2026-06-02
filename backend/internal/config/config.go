@@ -1,10 +1,38 @@
 package config
 
 import (
+	"bufio"
+	"os"
+	"strings"
 	"time"
 
 	"github.com/spf13/viper"
 )
+
+func loadEnvFile(path string) {
+	f, err := os.Open(path)
+	if err != nil {
+		return
+	}
+	defer f.Close()
+
+	scanner := bufio.NewScanner(f)
+	for scanner.Scan() {
+		line := strings.TrimSpace(scanner.Text())
+		if line == "" || strings.HasPrefix(line, "#") {
+			continue
+		}
+		parts := strings.SplitN(line, "=", 2)
+		if len(parts) != 2 {
+			continue
+		}
+		key := strings.TrimSpace(parts[0])
+		val := strings.TrimSpace(parts[1])
+		if os.Getenv(key) == "" {
+			os.Setenv(key, val)
+		}
+	}
+}
 
 type Config struct {
 	Server   ServerConfig
@@ -31,9 +59,10 @@ type JWTConfig struct {
 }
 
 type GitHubOAuthConfig struct {
-	ClientID     string
-	ClientSecret string
-	RedirectURL  string
+	ClientID      string
+	ClientSecret  string
+	RedirectURL   string
+	AdminGitHubID int64
 }
 
 type AIConfig struct {
@@ -43,6 +72,9 @@ type AIConfig struct {
 }
 
 func Load() (*Config, error) {
+	loadEnvFile(".env")
+	loadEnvFile("../.env")
+
 	viper.AutomaticEnv()
 
 	viper.SetDefault("SERVER_PORT", ":8080")
@@ -79,9 +111,10 @@ func Load() (*Config, error) {
 			RefreshExpiry: refreshExpiry,
 		},
 		GitHub: GitHubOAuthConfig{
-			ClientID:     viper.GetString("GITHUB_CLIENT_ID"),
-			ClientSecret: viper.GetString("GITHUB_CLIENT_SECRET"),
-			RedirectURL:  viper.GetString("GITHUB_REDIRECT_URL"),
+			ClientID:      viper.GetString("GITHUB_CLIENT_ID"),
+			ClientSecret:  viper.GetString("GITHUB_CLIENT_SECRET"),
+			RedirectURL:   viper.GetString("GITHUB_REDIRECT_URL"),
+			AdminGitHubID: viper.GetInt64("ADMIN_GITHUB_ID"),
 		},
 		AI: AIConfig{
 			Provider: viper.GetString("AI_PROVIDER"),

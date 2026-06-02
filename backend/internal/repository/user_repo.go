@@ -15,6 +15,7 @@ type UserRepository interface {
 	GetByUsername(ctx context.Context, username string) (*model.User, error)
 	GetByGithubID(ctx context.Context, githubID int64) (*model.User, error)
 	Update(ctx context.Context, user *model.User) error
+	SetRole(ctx context.Context, id int64, role string) error
 }
 
 type userRepo struct {
@@ -110,5 +111,10 @@ func (r *userRepo) Update(ctx context.Context, user *model.User) error {
 		 WHERE id=$5`,
 		user.DisplayName, user.AvatarURL, user.Bio, user.UpdatedAt, user.ID,
 	)
+	return err
+}
+
+func (r *userRepo) SetRole(ctx context.Context, id int64, role string) error {
+	_, err := r.db.Exec(ctx, "UPDATE users SET role=$1, updated_at=NOW() WHERE id=$2", role, id)
 	return err
 }
