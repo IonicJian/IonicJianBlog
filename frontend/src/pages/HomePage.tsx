@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { blogApi } from '../api/blogs';
+import { blogApi } from '../api/blog';
 import apiClient from '../api/client';
 import type { BlogListItem } from '../types/blog';
 import BlogCard from '../components/common/BlogCard';

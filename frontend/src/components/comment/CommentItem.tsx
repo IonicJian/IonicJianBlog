@@ -3,7 +3,7 @@ import LikeButton from '../like/LikeButton';
 import CommentForm from './CommentForm';
 import MarkdownRenderer from '../common/MarkdownRenderer';
 import { useAuthStore } from '../../store/authStore';
-import { commentApi } from '../../api/comments';
+import { commentApi } from '../../api/social';
 import type { Comment } from '../../types/comment';
 
 export default function CommentItem({ comment, blogId, onRefresh, depth = 0 }: {

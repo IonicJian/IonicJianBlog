@@ -1,7 +1,8 @@
 import { useState, useEffect, useCallback } from 'react';
 import { Link } from 'react-router-dom';
-import { useAuthStore } from '../store/authStore';
-import { guestbookApi, type GuestbookMessage } from '../api/guestbook';
+import { useAuthStore } from '../../store/authStore';
+import { guestbookApi } from '../../api/social';
+import type { GuestbookMessage } from '../../types/guestbook';
 
 export default function GuestbookPage() {
   const { user } = useAuthStore();

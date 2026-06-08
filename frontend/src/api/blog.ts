@@ -1,6 +1,7 @@
 import apiClient from './client';
 import type { ApiResponse, PaginatedResponse } from '../types/common';
 import type { Blog, BlogListItem, Tag } from '../types/blog';
+import type { Category } from '../types/category';
 
 export const blogApi = {
   list: (params?: { page?: number; page_size?: number; tag?: string; category?: string }) =>
@@ -45,4 +46,11 @@ export const tagApi = {
 
   delete: (id: number) =>
     apiClient.delete(`/tags/${id}`),
+};
+
+export const categoryApi = {
+  list: () => apiClient.get<ApiResponse<Category[]>>('/categories'),
+  delete: (id: number) => apiClient.delete(`/categories/${id}`),
+  create: (data: { name: string; description?: string; parent_id?: number | null }) =>
+    apiClient.post<ApiResponse<Category>>('/categories', data),
 };

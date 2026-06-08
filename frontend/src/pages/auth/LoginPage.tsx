@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { useAuthStore } from '../store/authStore';
-import { IconGitHub } from '../components/common/Icons';
+import { useAuthStore } from '../../store/authStore';
+import { IconGitHub } from '../../components/common/Icons';
 
 export default function LoginPage() {
   const [email, setEmail] = useState('');

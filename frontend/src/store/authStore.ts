@@ -17,6 +17,7 @@ interface AuthState {
   handleOAuthCallback: (accessToken: string, refreshToken: string) => void;
   setUser: (user: User) => void;
   init: () => void;
+  setAuthFromResponse: (data: { user: User; access_token: string; refresh_token: string }) => void;
 }
 
 export const useAuthStore = create<AuthState>((set, get) => ({
@@ -37,27 +38,21 @@ export const useAuthStore = create<AuthState>((set, get) => ({
 
   login: async (email, password) => {
     const res = await authApi.login(email, password);
-    const { user, access_token, refresh_token } = res.data.data;
-    localStorage.setItem('access_token', access_token);
-    localStorage.setItem('refresh_token', refresh_token);
-    set({
-      user,
-      accessToken: access_token,
-      refreshToken: refresh_token,
-      isAuthenticated: true,
-      isLoading: false,
-    });
+    get().setAuthFromResponse(res.data.data);
   },
 
   register: async (username, email, password) => {
     const res = await authApi.register(username, email, password);
-    const { user, access_token, refresh_token } = res.data.data;
-    localStorage.setItem('access_token', access_token);
-    localStorage.setItem('refresh_token', refresh_token);
+    get().setAuthFromResponse(res.data.data);
+  },
+
+  setAuthFromResponse: (data) => {
+    localStorage.setItem('access_token', data.access_token);
+    localStorage.setItem('refresh_token', data.refresh_token);
     set({
-      user,
-      accessToken: access_token,
-      refreshToken: refresh_token,
+      user: data.user,
+      accessToken: data.access_token,
+      refreshToken: data.refresh_token,
       isAuthenticated: true,
       isLoading: false,
     });
@@ -100,7 +95,6 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     localStorage.setItem('access_token', accessToken);
     localStorage.setItem('refresh_token', refreshToken);
     set({ accessToken, refreshToken, isAuthenticated: true, isLoading: false });
-    // Fetch profile to get user info
     authApi.getProfile().then((res) => {
       set({ user: res.data.data });
     }).catch(() => {

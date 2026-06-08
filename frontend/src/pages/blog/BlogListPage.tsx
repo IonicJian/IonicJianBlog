@@ -1,9 +1,10 @@
 import { useState, useEffect } from 'react';
-import { blogApi, tagApi } from '../api/blogs';
-import { categoryApi, type Category } from '../api/categories';
-import { useAuthStore } from '../store/authStore';
-import type { BlogListItem, Tag } from '../types/blog';
-import BlogCard from '../components/common/BlogCard';
+import { blogApi, tagApi } from '../../api/blog';
+import { categoryApi } from '../../api/blog';
+import type { Category } from '../../types/category';
+import { useAuthStore } from '../../store/authStore';
+import type { BlogListItem, Tag } from '../../types/blog';
+import BlogCard from '../../components/common/BlogCard';
 
 
 function CategoryItem({ cat, activeCat, onClick, setPage, depth, isAdmin, onDelete }: { cat: any; activeCat: string; onClick: (s: string) => void; setPage: (n: number) => void; depth: number; isAdmin?: boolean; onDelete?: (id: number) => void }) {

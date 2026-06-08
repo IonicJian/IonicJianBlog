@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
-import { trendingApi, type TrendingRepo } from '../api/trending';
-import { IconStar, IconGitFork } from '../components/common/Icons';
+import { trendingApi, type TrendingRepo } from '../../api/trending';
+import { IconStar, IconGitFork } from '../../components/common/Icons';
 
 const langColors: Record<string, string> = { Go:'bg-cyan-500',JavaScript:'bg-yellow-400',TypeScript:'bg-blue-500',Python:'bg-green-500',Rust:'bg-orange-600',Java:'bg-red-500','C++':'bg-pink-500',C:'bg-slate-500',Ruby:'bg-red-600',Swift:'bg-orange-500',Kotlin:'bg-purple-500' };
 

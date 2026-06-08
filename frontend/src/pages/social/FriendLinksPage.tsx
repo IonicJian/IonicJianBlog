@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
-import { useAuthStore } from '../store/authStore';
-import { friendLinkApi, type FriendLink } from '../api/friendLinks';
+import { useAuthStore } from '../../store/authStore';
+import { friendLinkApi } from '../../api/social';
+import type { FriendLink } from '../../types/friendLink';
 
 export default function FriendLinksPage() {
   const { user } = useAuthStore();

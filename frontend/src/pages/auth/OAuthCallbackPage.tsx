@@ -1,6 +1,6 @@
 import { useEffect } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
-import { useAuthStore } from '../store/authStore';
+import { useAuthStore } from '../../store/authStore';
 
 export default function OAuthCallbackPage() {
   const [params] = useSearchParams();

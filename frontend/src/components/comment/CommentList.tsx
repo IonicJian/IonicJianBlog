@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { commentApi } from '../../api/comments';
+import { commentApi } from '../../api/social';
 import CommentItem from './CommentItem';
 import CommentForm from './CommentForm';
 import type { Comment } from '../../types/comment';

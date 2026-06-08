@@ -1,6 +1,6 @@
 import { useState, useRef } from 'react';
 import { useAuthStore } from '../../store/authStore';
-import { commentApi } from '../../api/comments';
+import { commentApi } from '../../api/social';
 import MarkdownRenderer from '../common/MarkdownRenderer';
 import { IconGitHub } from '../common/Icons';
 

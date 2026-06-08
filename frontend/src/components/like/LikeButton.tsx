@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { likeApi } from '../../api/likes';
+import { likeApi } from '../../api/social';
 import { IconHeart } from '../common/Icons';
 
 interface Props {

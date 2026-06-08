@@ -1,14 +1,14 @@
 import { useState, useEffect } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
-import { useAuthStore } from '../store/authStore';
-import { blogApi } from '../api/blogs';
-import MarkdownRenderer from '../components/common/MarkdownRenderer';
-import LikeButton from '../components/like/LikeButton';
-import CommentList from '../components/comment/CommentList';
-import { IconQuote, IconArrowLeft } from '../components/common/Icons';
-import Lightbox from '../components/common/Lightbox';
-import TableOfContents from '../components/common/TableOfContents';
-import type { Blog } from '../types/blog';
+import { useAuthStore } from '../../store/authStore';
+import { blogApi } from '../../api/blog';
+import MarkdownRenderer from '../../components/common/MarkdownRenderer';
+import LikeButton from '../../components/like/LikeButton';
+import CommentList from '../../components/comment/CommentList';
+import { IconQuote, IconArrowLeft } from '../../components/common/Icons';
+import Lightbox from '../../components/common/Lightbox';
+import TableOfContents from '../../components/common/TableOfContents';
+import type { Blog } from '../../types/blog';
 
 export default function BlogDetailPage() {
   const { id } = useParams();

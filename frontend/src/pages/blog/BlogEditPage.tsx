@@ -1,24 +1,23 @@
 import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useParams, useNavigate } from 'react-router-dom';
 import MDEditor from '@uiw/react-md-editor';
-import { useAuthStore } from '../store/authStore';
-import { blogApi } from '../api/blogs';
-import { categoryApi, type Category } from '../api/categories';
-import { tagApi } from '../api/blogs';
-import type { Tag } from '../types/blog';
-import MarkdownRenderer from '../components/common/MarkdownRenderer';
-import ImageUploadButton from '../components/common/ImageUploadButton';
-import { useUIStore } from '../store/uiStore';
+import { blogApi, tagApi } from '../../api/blog';
+import { categoryApi } from '../../api/blog';
+import type { Category } from '../../types/category';
+import type { Tag } from '../../types/blog';
+import MarkdownRenderer from '../../components/common/MarkdownRenderer';
+import ImageUploadButton from '../../components/common/ImageUploadButton';
+import { useUIStore } from '../../store/uiStore';
 
 function TagCreator({ onCreated }: { onCreated: (tag: Tag) => void }) {
   const [open, setOpen] = useState(false); const [name, setName] = useState(''); const [color, setColor] = useState('#d97706'); const [saving, setSaving] = useState(false);
   const colors = ['#d97706','#ef4444','#3b82f6','#10b981','#8b5cf6','#ec4899','#6366f1','#14b8a6'];
-  if (!open) return <button type="button" onClick={() => setOpen(true)} className="px-2.5 py-1 rounded-full text-xs border border-dashed border-slate-300 dark:border-slate-600 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 font-light cursor-pointer transition-colors">+ 新标签</button>;
+  if (!open) return <button type="button" onClick={() => setOpen(true)} className="px-2.5 py-1 rounded-full text-xs border border-dashed border-slate-300 dark:border-slate-600 text-slate-400 hover:text-slate-600 font-light cursor-pointer transition-colors">+ 新标签</button>;
   return (
     <span className="inline-flex items-center gap-1 glass rounded-full px-2.5 py-1">
       <input value={name} onChange={e => setName(e.target.value)} placeholder="标签名" className="w-14 text-xs bg-transparent border-none outline-none text-slate-800 dark:text-slate-200 font-light" autoFocus />
       <span className="flex gap-0.5">{colors.map(c => <button key={c} onClick={() => setColor(c)} className={`w-3.5 h-3.5 rounded-full border-2 cursor-pointer transition-all ${color===c?'border-slate-800 dark:border-slate-200 scale-110':'border-transparent'}`} style={{backgroundColor:c}} />)}</span>
-      <button onClick={async () => { if(!name.trim())return; setSaving(true); try { const r = await tagApi.create({name:name.trim(),color}); onCreated(r.data.data); setName(''); setOpen(false); } catch{} finally { setSaving(false); } }} disabled={saving||!name.trim()} className="text-xs text-amber-600 dark:text-amber-500 hover:text-amber-700 font-light disabled:opacity-30 bg-transparent border-none cursor-pointer">确定</button>
+      <button onClick={async () => { if(!name.trim())return; setSaving(true); try { const r = await tagApi.create({name:name.trim(),color}); onCreated(r.data.data); setName(''); setOpen(false); } catch{} finally { setSaving(false); } }} disabled={saving||!name.trim()} className="text-xs text-amber-600 hover:text-amber-700 font-light disabled:opacity-30 bg-transparent border-none cursor-pointer">确定</button>
       <button onClick={() => setOpen(false)} className="text-xs text-slate-400 hover:text-slate-600 bg-transparent border-none cursor-pointer">×</button>
     </span>
   );
@@ -50,50 +49,47 @@ function CategoryCreator({ onCreated, categories }: { onCreated: (cat: Category)
   );
 }
 
-export default function BlogCreatePage() {
-  const isAuthenticated = useAuthStore(s => s.isAuthenticated);
-  const navigate = useNavigate();
-  const [title, setTitle] = useState('');
-  const [content, setContent] = useState('# 标题\n\n开始写你的内容...');
+export default function BlogEditPage() {
+  const { id } = useParams(); const navigate = useNavigate();
+  const [title, setTitle] = useState(''); const [content, setContent] = useState('');
   const [status, setStatus] = useState<'draft'|'published'>('published');
   const [categoryId, setCategoryId] = useState<number|null>(null);
   const [selectedTags, setSelectedTags] = useState<number[]>([]);
-  const [saving, setSaving] = useState(false); const [error, setError] = useState('');
-  const [categories, setCategories] = useState<Category[]>([]);
-  const [tags, setTags] = useState<Tag[]>([]);
+  const [saving, setSaving] = useState(false); const [loading, setLoading] = useState(true); const [error, setError] = useState('');
+  const [deleteConfirm, setDeleteConfirm] = useState(false);
+  const [categories, setCategories] = useState<Category[]>([]); const [tags, setTags] = useState<Tag[]>([]);
   const theme = useUIStore(s => s.theme);
 
-  useEffect(() => { categoryApi.list().then(r => setCategories(r.data.data||[])).catch(()=>{}); tagApi.list().then(r => setTags(r.data.data||[])).catch(()=>{}); }, []);
-  if (!isAuthenticated) return <div className="py-20 text-center text-slate-400 font-light">请先登录</div>;
+  useEffect(() => {
+    if (!id) return;
+    blogApi.getById(Number(id)).then(res => { const b=res.data.data; setTitle(b.title); setContent(b.content); setStatus(b.status as'draft'|'published'); setCategoryId(b.category_id??null); setSelectedTags(b.tags?.map(t=>t.id)||[]); }).catch(()=>setError('文章不存在')).finally(()=>setLoading(false));
+    categoryApi.list().then(r=>setCategories(r.data.data||[])).catch(()=>{});
+    tagApi.list().then(r=>setTags(r.data.data||[])).catch(()=>{});
+  }, [id]);
 
-  const handleSubmit = async (e: React.FormEvent) => { e.preventDefault(); setError(''); setSaving(true); try { const res = await blogApi.create({title,content,status,category_id:categoryId??undefined,tag_ids:selectedTags}); navigate(`/blogs/${res.data.data.id}`); } catch(err:any){ setError(err.response?.data?.message||'创建失败'); } finally { setSaving(false); } };
+  const handleSubmit = async (e: React.FormEvent) => { e.preventDefault(); setError(''); setSaving(true); try { await blogApi.update(Number(id),{title,content,status,category_id:categoryId??undefined,tag_ids:selectedTags}); navigate(`/blogs/${id}`); } catch(err:any){ setError(err.response?.data?.message||'更新失败'); } finally { setSaving(false); } };
+  const handleDelete = async () => { try { await blogApi.delete(Number(id)); navigate('/blogs'); } catch(err:any){ setError(err.response?.data?.message||'删除失败'); } };
+
+  if (loading) return <div className="py-20 text-center text-slate-400 font-light">加载中...</div>;
 
   return (
     <div className="py-8">
-      <h1 className="font-bold text-4xl text-slate-800 dark:text-slate-100 mb-8">写博客</h1>
+      <h1 className="font-bold text-4xl text-slate-800 dark:text-slate-100 mb-8">编辑博客</h1>
       <form onSubmit={handleSubmit} className="space-y-5">
         {error && <div className="bg-red-50/80 dark:bg-red-950/30 text-red-600 dark:text-red-400 px-4 py-3 rounded-xl text-xs font-light">{error}</div>}
 
-        <input type="text" value={title} onChange={e => setTitle(e.target.value)} required placeholder="文章标题" className="input-underline !text-xl !py-3" />
+        <input type="text" value={title} onChange={e => setTitle(e.target.value)} required className="input-underline !text-xl !py-3" />
 
         <div className="flex items-center gap-4">
           <div className="flex items-center gap-2">
             <select value={categoryId??''} onChange={e => setCategoryId(e.target.value?Number(e.target.value):null)} className="bg-transparent border border-black/5 dark:border-white/5 rounded-xl px-3 py-2 text-sm text-slate-600 dark:text-slate-400 font-light focus:outline-none focus:border-amber-500/50">
               <option value="">选择分类</option>
-              {categories.flatMap((c: Category) => {
-  const items = [{ id: c.id, name: c.name, depth: 0 }];
-  const flatten = (cats: Category[], d: number) => { for (const x of cats) { items.push({ id: x.id, name: x.name, depth: d }); if (x.children) flatten(x.children, d + 1); } };
-  if (c.children) flatten(c.children, 1);
-  return items;
-}).map((c: any) => (
-                <option key={c.id} value={c.id}>{'└ '.repeat(c.depth)}{c.name}</option>
-              ))}
+              {categories.flatMap((c: any) => { const items = [{ id: c.id, name: c.name, depth: 0 }]; const flatten = (cats: any[], d: number) => { for (const x of cats) { items.push({ id: x.id, name: x.name, depth: d }); if (x.children) flatten(x.children, d + 1); } }; if (c.children) flatten(c.children, 1); return items; }).map((c: any) => (<option key={c.id} value={c.id}>{(Array(c.depth).fill('└ ').join(''))}{c.name}</option>))}
             </select>
             <CategoryCreator categories={categories} onCreated={(cat: any) => { setCategories((prev: any) => [...prev, cat]); setCategoryId(cat.id); }} />
           </div>
-          <select value={status} onChange={e => setStatus(e.target.value as 'draft'|'published')} className="bg-transparent border border-black/5 dark:border-white/5 rounded-xl px-3 py-2 text-sm text-slate-600 dark:text-slate-400 font-light focus:outline-none focus:border-amber-500/50">
-            <option value="published">发布</option>
-            <option value="draft">草稿</option>
+          <select value={status} onChange={e => setStatus(e.target.value as'draft'|'published')} className="bg-transparent border border-black/5 dark:border-white/5 rounded-xl px-3 py-2 text-sm text-slate-600 dark:text-slate-400 font-light focus:outline-none focus:border-amber-500/50">
+            <option value="published">发布</option><option value="draft">草稿</option>
           </select>
         </div>
 
@@ -116,9 +112,13 @@ export default function BlogCreatePage() {
           </div>
         </div>
 
-        <div className="flex items-center gap-4 pt-2">
-          <button type="submit" disabled={saving||!title} className="btn-primary">{saving?'保存中...':'发布'}</button>
-          <button type="button" onClick={() => navigate(-1)} className="btn-ghost">取消</button>
+        <div className="flex items-center justify-between pt-2">
+          <div className="flex items-center gap-4">
+            <button type="submit" disabled={saving||!title} className="btn-primary">{saving?'保存中...':'保存'}</button>
+            <button type="button" onClick={() => navigate(-1)} className="btn-ghost">取消</button>
+          </div>
+          {!deleteConfirm ? <button type="button" onClick={() => setDeleteConfirm(true)} className="text-sm text-red-500 hover:text-red-600 font-light bg-transparent border-none cursor-pointer transition-colors">删除</button>
+          : <div className="flex items-center gap-2"><span className="text-sm text-red-500 font-light">确认删除？</span><button type="button" onClick={handleDelete} className="text-sm bg-red-500 text-white px-3 py-1 rounded-lg hover:bg-red-600 cursor-pointer font-light">确认</button><button type="button" onClick={() => setDeleteConfirm(false)} className="text-sm text-slate-400 hover:text-slate-600 bg-transparent border-none cursor-pointer font-light">取消</button></div>}
         </div>
       </form>
     </div>
