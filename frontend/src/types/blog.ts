@@ -15,6 +15,8 @@ export interface Blog {
   author?: import('./user').User;
   like_count: number;
   liked_by_me: boolean;
+  category_id?: number;
+  category?: { id: number; name: string; slug: string };
   tags?: Tag[];
 }
 
@@ -31,6 +33,8 @@ export interface BlogListItem {
   updated_at: string;
   like_count: number;
   liked_by_me: boolean;
+  category_id?: number;
+  category?: { id: number; name: string; slug: string };
   tags?: Tag[];
 }
 

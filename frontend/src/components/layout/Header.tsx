@@ -1,82 +1,46 @@
-import { Link, useNavigate } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 import { useAuthStore } from '../../store/authStore';
 import { useUIStore } from '../../store/uiStore';
+import { IconSun, IconMoon } from '../common/Icons';
+import UserMenu from './UserMenu';
 
 export default function Header() {
-  const { isAuthenticated, user, logout } = useAuthStore();
+  const { isAuthenticated, user } = useAuthStore();
   const { theme, toggleTheme } = useUIStore();
-  const navigate = useNavigate();
-
-  const handleLogout = () => {
-    logout();
-    navigate('/');
-  };
-
   return (
-    <header className="bg-white dark:bg-gray-900 shadow-sm border-b border-gray-200 dark:border-gray-700">
-      <div className="container mx-auto px-4 max-w-5xl">
-        <div className="flex items-center justify-between h-14">
-          <Link to="/" className="text-xl font-bold text-gray-800 dark:text-gray-100 no-underline">
-            My Blog
-          </Link>
+    <header className="fixed top-0 left-0 right-0 z-50 glass-strong transition-all duration-500" style={{ borderRadius: 0 }}>
+      <div className="max-w-5xl mx-auto px-6 flex items-center justify-between h-14">
+        <Link to="/" className="font-bold text-xl text-slate-800 dark:text-slate-100 no-underline tracking-tight">
+          Zane
+        </Link>
 
-          <nav className="flex items-center gap-4 text-sm">
-            <Link to="/blogs" className="text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white no-underline">
-              博客
-            </Link>
-            <Link to="/friends" className="text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white no-underline">
-              友链
-            </Link>
-            <Link to="/guestbook" className="text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white no-underline">
-              留言墙
-            </Link>
-            <Link to="/trending" className="text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white no-underline">
-              趋势
-            </Link>
+        <nav className="flex items-center gap-6 text-sm">
+          <Link to="/blogs" className="text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-100 no-underline font-light tracking-wide transition-colors link-underline">博客</Link>
+          <Link to="/friends" className="text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-100 no-underline font-light tracking-wide transition-colors link-underline">友链</Link>
+          <Link to="/guestbook" className="text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-100 no-underline font-light tracking-wide transition-colors link-underline">留言</Link>
+          <Link to="/trending" className="text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-100 no-underline font-light tracking-wide transition-colors link-underline">趋势</Link>
 
-            {/* Theme toggle */}
-            <button
-              onClick={toggleTheme}
-              title={theme === 'dark' ? '切换浅色模式' : '切换深色模式'}
-              className="text-lg bg-transparent border-none cursor-pointer px-1 leading-none"
-            >
-              {theme === 'dark' ? '☀️' : '🌙'}
-            </button>
+          <button onClick={toggleTheme} title="切换主题"
+            className="text-slate-400 dark:text-slate-500 hover:text-slate-600 dark:hover:text-slate-300 bg-transparent border-none cursor-pointer p-1 transition-colors">
+            {theme === 'dark' ? <IconSun className="w-4 h-4" /> : <IconMoon className="w-4 h-4" />}
+          </button>
 
-            <div className="ml-2 flex items-center gap-3">
-              {isAuthenticated ? (
-                <>
-                  {user?.role === 'admin' && (
-                    <Link to="/blogs/create" className="text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 no-underline font-medium">
-                      写博客
-                    </Link>
-                  )}
-                  <Link to="/profile" className="text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white no-underline">
-                    {user?.display_name || user?.username}
-                  </Link>
-                  <button
-                    onClick={handleLogout}
-                    className="text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 bg-transparent border-none cursor-pointer"
-                  >
-                    退出
-                  </button>
-                </>
-              ) : (
-                <>
-                  <Link to="/login" className="text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white no-underline">
-                    登录
-                  </Link>
-                  <Link
-                    to="/register"
-                    className="bg-blue-600 text-white px-3 py-1.5 rounded-md hover:bg-blue-700 no-underline text-sm"
-                  >
-                    注册
-                  </Link>
-                </>
-              )}
-            </div>
-          </nav>
-        </div>
+          <div className="flex items-center gap-3">
+            {isAuthenticated ? (
+              <>
+                {user?.role === 'admin' && (
+                  <Link to="/blogs/create" className="text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-100 no-underline text-sm font-light tracking-wide transition-colors">写博客</Link>
+                )}
+                <UserMenu />
+              </>
+            ) : (
+              <>
+                <Link to="/login" className="text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-100 no-underline text-sm font-light tracking-wide transition-colors">登录</Link>
+                <Link to="/register" className="btn-primary !py-1.5 !px-4 !text-xs no-underline">注册</Link>
+              </>
+            )}
+          </div>
+        </nav>
       </div>
     </header>
   );

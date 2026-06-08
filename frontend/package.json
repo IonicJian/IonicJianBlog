@@ -11,14 +11,17 @@
   },
   "dependencies": {
     "@tailwindcss/typography": "^0.5.19",
+    "@types/react-syntax-highlighter": "^15.5.13",
     "@uiw/react-md-editor": "^4.1.1",
     "axios": "^1.16.1",
     "react": "^19.2.6",
     "react-dom": "^19.2.6",
     "react-markdown": "^10.1.0",
     "react-router-dom": "^7.16.0",
+    "react-syntax-highlighter": "^16.1.1",
     "rehype-highlight": "^7.0.2",
     "remark-gfm": "^4.0.1",
+    "yet-another-react-lightbox": "^3.32.0",
     "zustand": "^5.0.14"
   },
   "devDependencies": {

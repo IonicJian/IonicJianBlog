@@ -6,6 +6,7 @@ type CreateBlogRequest struct {
 	CoverImage string   `json:"cover_image"`
 	Status     string   `json:"status" binding:"oneof=draft published"`
 	TagIDs     []int64  `json:"tag_ids"`
+	CategoryID *int64   `json:"category_id"`
 	IsTop      bool     `json:"is_top"`
 }
 
@@ -15,5 +16,6 @@ type UpdateBlogRequest struct {
 	CoverImage string   `json:"cover_image"`
 	Status     string   `json:"status" binding:"oneof=draft published"`
 	TagIDs     []int64  `json:"tag_ids"`
+	CategoryID *int64   `json:"category_id"`
 	IsTop      *bool    `json:"is_top"`
 }

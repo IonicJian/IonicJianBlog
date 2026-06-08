@@ -1,60 +1,119 @@
-import { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
+import { useState, useEffect, useRef } from 'react';
 import { blogApi } from '../api/blogs';
+import apiClient from '../api/client';
 import type { BlogListItem } from '../types/blog';
+import BlogCard from '../components/common/BlogCard';
+
+type Tab = 'latest' | 'recommended';
 
 export default function HomePage() {
   const [blogs, setBlogs] = useState<BlogListItem[]>([]);
+  const [topBlogs, setTopBlogs] = useState<BlogListItem[]>([]);
+  const [activeTab, setActiveTab] = useState<Tab>('latest');
+  const [panelOpen, setPanelOpen] = useState(false);
+  const [owner, setOwner] = useState({ display_name: 'Zane', avatar_url: '' });
+  const closeTimer = useRef<ReturnType<typeof setTimeout>>(undefined);
 
   useEffect(() => {
-    blogApi.list({ page: 1, page_size: 3 }).then((res) => {
-      setBlogs(res.data.data.items || []);
+    blogApi.list({ page: 1, page_size: 50 }).then((res) => {
+      const items = res.data.data.items || [];
+      setBlogs(items);
+      setTopBlogs(items.filter((b) => b.is_top));
+    }).catch(() => {});
+    apiClient.get('/site/owner').then((res: any) => {
+      if (res.data?.data) setOwner(res.data.data);
     }).catch(() => {});
   }, []);
 
-  return (
-    <div className="py-12">
-      <section className="text-center mb-12">
-        <h1 className="text-4xl font-bold text-gray-900 dark:text-gray-100 mb-4">欢迎来到我的博客</h1>
-        <p className="text-lg text-gray-600 dark:text-gray-400 max-w-2xl mx-auto">
-          分享技术思考、教程和软件开发经验。
-        </p>
-        <div className="mt-6 flex justify-center gap-3">
-          <Link to="/blogs" className="bg-blue-600 text-white px-5 py-2.5 rounded-lg hover:bg-blue-700 no-underline font-medium">
-            浏览博客
-          </Link>
-          <Link to="/guestbook" className="bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-200 px-5 py-2.5 rounded-lg border border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700 no-underline font-medium">
-            写留言
-          </Link>
-        </div>
-      </section>
+  const openPanel = (tab: Tab) => { clearTimeout(closeTimer.current); setActiveTab(tab); setPanelOpen(true); };
+  const closePanel = () => { closeTimer.current = setTimeout(() => setPanelOpen(false), 600); };
+  const cancelClose = () => clearTimeout(closeTimer.current);
 
-      {blogs.length > 0 && (
-        <section>
-          <h2 className="text-2xl font-bold text-gray-900 dark:text-gray-100 mb-4">最新文章</h2>
-          <div className="space-y-4">
-            {blogs.map((blog) => (
-              <article key={blog.id} className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-5 hover:shadow-md transition-shadow">
-                <Link to={`/blogs/${blog.id}`} className="no-underline">
-                  <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-1 hover:text-blue-600 dark:hover:text-blue-400">
-                    {blog.is_top && <span className="text-red-500 mr-1">[置顶]</span>}
-                    {blog.title}
-                  </h3>
-                </Link>
-                <p className="text-gray-600 dark:text-gray-400 text-sm mb-2">{blog.excerpt}</p>
-                <div className="text-xs text-gray-400 dark:text-gray-500">
-                  {new Date(blog.created_at).toLocaleDateString('zh-CN')} · {blog.view_count} 阅读 · {blog.like_count} 赞
+  const displayBlogs = activeTab === 'recommended' && topBlogs.length > 0 ? topBlogs : blogs;
+  const avatarSrc = owner.avatar_url ? (owner.avatar_url.startsWith('http') ? owner.avatar_url : `http://localhost:8080${owner.avatar_url}`) : null;
+
+  return (
+    <div className="h-screen flex flex-col overflow-hidden bg-geo-lines" style={{ position: 'fixed', inset: 0 }}>
+      {/* ===== Hero — fills remaining space above tab bar ===== */}
+      <div className="flex-1 min-h-0 flex flex-col items-center justify-center relative overflow-hidden">
+        <div className="absolute inset-0 bg-gradient-to-b from-amber-50/20 via-transparent to-transparent dark:from-amber-950/15 dark:to-transparent pointer-events-none" />
+
+        <div className="flex flex-col items-center transition-all duration-500 ease-out"
+          style={{
+            transform: panelOpen ? 'scale(0.65) translateY(-8%)' : 'scale(1) translateY(0)',
+            opacity: panelOpen ? 0.35 : 1,
+          }}>
+          <div className="mb-8">
+            <div className="w-24 h-24 rounded-full overflow-hidden ring-1 ring-black/5 dark:ring-white/10 ring-offset-4 ring-offset-transparent">
+              {avatarSrc ? (
+                <img src={avatarSrc} alt="" className="w-full h-full object-cover" />
+              ) : (
+                <div className="w-full h-full bg-slate-100 dark:bg-slate-800 flex items-center justify-center">
+                  <span className="text-3xl font-bold text-slate-400 dark:text-slate-500">{owner.display_name?.[0] || 'Z'}</span>
                 </div>
-              </article>
-            ))}
+              )}
+            </div>
           </div>
-          <div className="text-center mt-6">
-            <Link to="/blogs" className="text-blue-600 dark:text-blue-400 hover:underline text-sm">
-              查看全部文章 &rarr;
-            </Link>
+
+          <h1 className="font-bold text-6xl md:text-7xl text-slate-800 dark:text-slate-100 mb-4 animate-fade-up stagger-1 tracking-tight">
+            {owner.display_name}
+          </h1>
+
+          <p className="text-sm font-light tracking-[0.3em] text-slate-400 dark:text-slate-500 mb-2 animate-fade-up stagger-2 uppercase">
+            Software Engineer
+          </p>
+
+          <div className="w-8 h-px bg-amber-500/40 my-6 animate-fade-up stagger-3" />
+
+          <p className="text-sm text-slate-400 dark:text-slate-500 font-light animate-fade-up stagger-3">
+            思考 · 构建 · 分享
+          </p>
+        </div>
+      </div>
+
+      {/* ===== Tab bar — browser-tab style, merges with panel ===== */}
+      <div className="flex-shrink-0 flex items-end justify-center gap-0"
+        onMouseEnter={cancelClose} onMouseLeave={closePanel}>
+        {(['recommended', 'latest'] as Tab[]).map(tab => (
+          <button
+            key={tab}
+            className={`group relative bg-transparent border border-transparent cursor-pointer inline-flex flex-col items-center justify-center w-44 pt-2.5 pb-1.5 rounded-t-xl transition-all duration-300 ${
+              activeTab === tab && panelOpen
+                ? 'bg-white dark:bg-slate-800 !rounded-b-none !border-b-0 !shadow-none'
+                : 'hover:bg-white/30 dark:hover:bg-slate-800/30'
+            }`}
+            onMouseEnter={() => openPanel(tab)}
+          >
+            <span className={`text-sm font-light tracking-[0.15em] transition-colors duration-300 ${
+              activeTab === tab && panelOpen ? 'text-slate-800 dark:text-slate-100' : 'text-slate-400 dark:text-slate-500'
+            }`}>{tab === 'recommended' ? '推荐阅读' : '最新文章'}</span>
+            <span className={`h-0.5 bg-amber-500 rounded-full transition-all duration-300 mt-0.5 ${
+              activeTab === tab && panelOpen ? 'w-1/2' : 'w-0 group-hover:w-1/2'
+            }`} />
+          </button>
+        ))}
+      </div>
+
+      {/* ===== Blog panel ===== */}
+      <div className="overflow-hidden flex-shrink-0"
+        style={{
+          height: panelOpen ? '66vh' : '0px',
+          transition: 'height 0.5s ease-out',
+          willChange: 'height',
+        }}
+        onMouseEnter={cancelClose} onMouseLeave={closePanel}>
+        <div className="h-full overflow-y-auto !rounded-t-none bg-white dark:bg-slate-800" style={{ borderTop: 'none', transform: 'translateZ(0)' }}>
+          <div className="max-w-3xl mx-auto px-8 py-6">
+            {displayBlogs.length === 0 ? (
+              <p className="text-sm text-slate-400 dark:text-slate-600 font-light tracking-wider py-16 text-center">暂无文章</p>
+            ) : (
+              <div className="space-y-3">
+                {displayBlogs.map(blog => <BlogCard key={blog.id} blog={blog} variant="simple" />)}
+              </div>
+            )}
           </div>
-        </section>
-      )}
+        </div>
+      </div>
     </div>
   );
 }

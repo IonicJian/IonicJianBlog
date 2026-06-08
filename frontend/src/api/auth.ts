@@ -26,4 +26,7 @@ export const authApi = {
 
   updateProfile: (data: { display_name?: string; bio?: string; avatar_url?: string }) =>
     apiClient.put<ApiResponse<User>>('/users/me', data),
+
+  uploadAvatar: (formData: FormData) =>
+    apiClient.post<ApiResponse<{ avatar_url: string; user: User }>>('/users/me/avatar/upload', formData),
 };

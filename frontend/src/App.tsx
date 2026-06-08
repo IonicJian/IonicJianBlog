@@ -8,7 +8,6 @@ import BlogCreatePage from './pages/BlogCreatePage';
 import BlogEditPage from './pages/BlogEditPage';
 import LoginPage from './pages/LoginPage';
 import RegisterPage from './pages/RegisterPage';
-import ProfilePage from './pages/ProfilePage';
 import FriendLinksPage from './pages/FriendLinksPage';
 import GuestbookPage from './pages/GuestbookPage';
 import TrendingPage from './pages/TrendingPage';
@@ -26,6 +25,32 @@ function App() {
     initTheme();
   }, [init, initTheme]);
 
+  // Scroll-triggered reveal observer
+  useEffect(() => {
+    const observer = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          if (entry.isIntersecting) {
+            entry.target.classList.add('is-visible');
+          }
+        });
+      },
+      { threshold: 0.1, rootMargin: '0px 0px -40px 0px' }
+    );
+    const els = document.querySelectorAll('.reveal-on-scroll');
+    els.forEach((el) => observer.observe(el));
+    // Also observe dynamically added elements
+    const mutationObserver = new MutationObserver(() => {
+      const newEls = document.querySelectorAll('.reveal-on-scroll:not(.is-visible)');
+      newEls.forEach((el) => observer.observe(el));
+    });
+    mutationObserver.observe(document.body, { childList: true, subtree: true });
+    return () => {
+      observer.disconnect();
+      mutationObserver.disconnect();
+    };
+  }, []);
+
   return (
     <BrowserRouter>
       <Routes>
@@ -37,7 +62,6 @@ function App() {
           <Route path="/blogs/:id/edit" element={<BlogEditPage />} />
           <Route path="/login" element={<LoginPage />} />
           <Route path="/register" element={<RegisterPage />} />
-          <Route path="/profile" element={<ProfilePage />} />
           <Route path="/friends" element={<FriendLinksPage />} />
           <Route path="/guestbook" element={<GuestbookPage />} />
           <Route path="/trending" element={<TrendingPage />} />

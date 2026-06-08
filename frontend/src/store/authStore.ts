@@ -15,6 +15,7 @@ interface AuthState {
   refreshSession: () => Promise<void>;
   fetchProfile: () => Promise<void>;
   handleOAuthCallback: (accessToken: string, refreshToken: string) => void;
+  setUser: (user: User) => void;
   init: () => void;
 }
 
@@ -92,6 +93,8 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       set({ isLoading: false });
     }
   },
+
+  setUser: (user) => set({ user }),
 
   handleOAuthCallback: (accessToken: string, refreshToken: string) => {
     localStorage.setItem('access_token', accessToken);

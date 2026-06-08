@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { likeApi } from '../../api/likes';
+import { IconHeart } from '../common/Icons';
 
 interface Props {
   blogId?: number;
@@ -36,13 +37,13 @@ export default function LikeButton({ blogId, commentId, initialLiked, initialCou
   return (
     <button
       onClick={handleToggle}
-      className={`inline-flex items-center gap-1 text-sm px-2 py-1 rounded-md border-none cursor-pointer transition-colors ${
+      className={`inline-flex items-center gap-1 text-sm px-3 py-1.5 rounded-xl border-none cursor-pointer transition-colors ${
         liked
-          ? 'text-red-500 dark:text-red-400 bg-red-50 dark:bg-red-900/30'
-          : 'text-gray-400 dark:text-gray-500 hover:text-red-400 bg-transparent hover:bg-red-50 dark:hover:bg-red-900/20'
+          ? 'text-amber-600 dark:text-amber-500 bg-amber-50/80 dark:bg-amber-950/30'
+          : 'text-slate-400 dark:text-slate-400 hover:text-amber-500 bg-transparent hover:bg-amber-50/60 dark:hover:bg-amber-950/20'
       }`}
     >
-      {liked ? '❤️' : '🤍'} <span>{count}</span>
+      <IconHeart filled={liked} className="w-4 h-4" /> <span>{count}</span>
     </button>
   );
 }

@@ -11,137 +11,66 @@ export default function FriendLinksPage() {
   const [showForm, setShowForm] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
-
-  // Form fields
-  const [name, setName] = useState('');
-  const [url, setUrl] = useState('');
-  const [description, setDescription] = useState('');
-  const [logoUrl, setLogoUrl] = useState('');
+  const [name, setName] = useState(''); const [url, setUrl] = useState('');
+  const [description, setDescription] = useState(''); const [logoUrl, setLogoUrl] = useState('');
   const [sortOrder, setSortOrder] = useState(0);
 
-  const fetchLinks = () => {
-    setLoading(true);
-    friendLinkApi.list()
-      .then((res) => setLinks(res.data.data || []))
-      .catch(() => {})
-      .finally(() => setLoading(false));
-  };
-
+  const fetchLinks = () => { setLoading(true); friendLinkApi.list().then(r => setLinks(r.data.data || [])).catch(()=>{}).finally(()=>setLoading(false)); };
   useEffect(() => { fetchLinks(); }, []);
-
-  const resetForm = () => {
-    setName(''); setUrl(''); setDescription(''); setLogoUrl(''); setSortOrder(0);
-    setEditing(null); setShowForm(false); setError('');
-  };
-
-  const openEdit = (link: FriendLink) => {
-    setName(link.name); setUrl(link.url); setDescription(link.description);
-    setLogoUrl(link.logo_url); setSortOrder(link.sort_order);
-    setEditing(link); setShowForm(true);
-  };
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!name.trim() || !url.trim()) return;
-    setSaving(true);
-    setError('');
-    try {
-      if (editing) {
-        await friendLinkApi.update(editing.id, { name, url, description, logo_url: logoUrl, sort_order: sortOrder });
-      } else {
-        await friendLinkApi.create({ name, url, description, logo_url: logoUrl, sort_order: sortOrder });
-      }
-      resetForm();
-      fetchLinks();
-    } catch (err: any) {
-      setError(err.response?.data?.message || '操作失败');
-    } finally {
-      setSaving(false);
-    }
-  };
-
-  const handleDelete = async (link: FriendLink) => {
-    if (!confirm(`确定删除友链「${link.name}」？`)) return;
-    try {
-      await friendLinkApi.delete(link.id);
-      fetchLinks();
-    } catch {}
-  };
+  const resetForm = () => { setName(''); setUrl(''); setDescription(''); setLogoUrl(''); setSortOrder(0); setEditing(null); setShowForm(false); setError(''); };
+  const openEdit = (l: FriendLink) => { setName(l.name); setUrl(l.url); setDescription(l.description); setLogoUrl(l.logo_url); setSortOrder(l.sort_order); setEditing(l); setShowForm(true); };
+  const handleSubmit = async (e: React.FormEvent) => { e.preventDefault(); if(!name.trim()||!url.trim())return; setSaving(true); setError(''); try { editing ? await friendLinkApi.update(editing.id,{name,url,description,logo_url:logoUrl,sort_order:sortOrder}) : await friendLinkApi.create({name,url,description,logo_url:logoUrl,sort_order:sortOrder}); resetForm(); fetchLinks(); } catch(err:any){ setError(err.response?.data?.message||'操作失败'); } finally { setSaving(false); } };
+  const handleDelete = async (l: FriendLink) => { if(!confirm(`删除「${l.name}」？`))return; try { await friendLinkApi.delete(l.id); fetchLinks(); } catch{} };
 
   return (
-    <div className="py-8">
-      <div className="flex items-center justify-between mb-6">
-        <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-100">友链</h1>
-        {isAdmin && !showForm && (
-          <button onClick={() => setShowForm(true)} className="bg-blue-600 text-white px-4 py-2 rounded-md text-sm hover:bg-blue-700 cursor-pointer">
-            添加友链
-          </button>
-        )}
+    <div className="py-10 page-enter">
+      <div className="flex items-center justify-between mb-10">
+        <div>
+          <h1 className="font-bold text-3xl text-slate-800 dark:text-slate-100 mb-1">友链</h1>
+          <p className="text-sm text-slate-400 dark:text-slate-500 font-light">朋友们</p>
+        </div>
+        {isAdmin && !showForm && <button onClick={() => setShowForm(true)} className="btn-primary !text-xs">添加友链</button>}
       </div>
 
-      {/* Admin form */}
       {isAdmin && showForm && (
-        <form onSubmit={handleSubmit} className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-4 mb-6 space-y-3">
-          <h3 className="font-semibold text-gray-900 dark:text-gray-100 text-sm">{editing ? '编辑友链' : '添加友链'}</h3>
-          {error && <div className="bg-red-50 dark:bg-red-900/30 text-red-700 dark:text-red-400 px-3 py-2 rounded text-xs">{error}</div>}
-          <div className="grid grid-cols-2 gap-3">
-            <input type="text" value={name} onChange={(e) => setName(e.target.value)} placeholder="名称 *" required
-              className="border border-gray-200 dark:border-gray-600 rounded-md px-3 py-2 text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500" />
-            <input type="url" value={url} onChange={(e) => setUrl(e.target.value)} placeholder="链接 *" required
-              className="border border-gray-200 dark:border-gray-600 rounded-md px-3 py-2 text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500" />
-            <input type="text" value={description} onChange={(e) => setDescription(e.target.value)} placeholder="描述"
-              className="border border-gray-200 dark:border-gray-600 rounded-md px-3 py-2 text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500" />
-            <input type="url" value={logoUrl} onChange={(e) => setLogoUrl(e.target.value)} placeholder="Logo URL"
-              className="border border-gray-200 dark:border-gray-600 rounded-md px-3 py-2 text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500" />
-            <input type="number" value={sortOrder} onChange={(e) => setSortOrder(Number(e.target.value))} placeholder="排序"
-              className="border border-gray-200 dark:border-gray-600 rounded-md px-3 py-2 text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500" />
+        <form onSubmit={handleSubmit} className="glass rounded-xl p-6 hover-lift mb-8 space-y-4 animate-scale-in">
+          <h3 className="text-base font-medium text-slate-800 dark:text-slate-200">{editing ? '编辑' : '添加'}友链</h3>
+          {error && <div className="bg-red-50/80 dark:bg-red-950/30 text-red-600 dark:text-red-400 px-4 py-3 rounded-xl text-xs font-light">{error}</div>}
+          <div className="grid grid-cols-2 gap-4">
+            {[{p:'名称 *',v:name,s:setName},{p:'链接 *',v:url,s:setUrl,t:'url'},{p:'描述',v:description,s:setDescription},{p:'Logo URL',v:logoUrl,s:setLogoUrl,t:'url'},{p:'排序',v:sortOrder,s:(v:number)=>setSortOrder(v),t:'number'}].map(f=>(
+              <input key={f.p} type={f.t||'text'} value={f.v as any} onChange={e=>f.s((f.t==='number'?Number(e.target.value):e.target.value)as any)} placeholder={f.p} className="input-underline" />
+            ))}
           </div>
-          <div className="flex items-center gap-2">
-            <button type="submit" disabled={saving}
-              className="bg-blue-600 text-white px-4 py-1.5 rounded text-sm hover:bg-blue-700 disabled:opacity-50 cursor-pointer">
-              {saving ? '保存中...' : '保存'}
-            </button>
-            <button type="button" onClick={resetForm} className="text-gray-500 dark:text-gray-400 text-sm hover:text-gray-700">取消</button>
+          <div className="flex gap-2">
+            <button type="submit" disabled={saving} className="btn-primary !text-xs !py-2">{saving?'保存中...':'保存'}</button>
+            <button type="button" onClick={resetForm} className="btn-ghost !text-xs !py-2">取消</button>
           </div>
         </form>
       )}
 
-      {/* Link list */}
-      {loading ? (
-        <div className="text-center py-12 text-gray-400 dark:text-gray-500">加载中...</div>
-      ) : links.length === 0 ? (
-        <div className="text-center py-12 text-gray-400 dark:text-gray-500">
-          {isAdmin ? '点击「添加友链」开始。' : '暂无友链。'}
-        </div>
-      ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {links.map((link) => (
-            <div key={link.id} className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-5 hover:shadow-md transition-shadow relative group">
-              <a href={link.url} target="_blank" rel="noopener noreferrer" className="no-underline">
-                <div className="flex items-center gap-3 mb-2">
-                  <div className="w-10 h-10 rounded-full bg-gray-100 dark:bg-gray-700 flex items-center justify-center overflow-hidden flex-shrink-0">
-                    {link.logo_url ? (
-                      <img src={link.logo_url} alt="" className="w-full h-full object-cover" />
-                    ) : (
-                      <span className="text-gray-400 text-lg">{link.name[0]}</span>
-                    )}
-                  </div>
-                  <span className="font-semibold text-gray-900 dark:text-gray-100">{link.name}</span>
+      {loading ? <p className="text-center py-16 text-slate-400 font-light">加载中...</p>
+      : links.length === 0 ? <p className="text-center py-16 text-slate-400 font-light">{isAdmin?'点击「添加友链」开始':'暂无友链'}</p>
+      : <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {links.map((link,i) => (
+            <div key={link.id} className="glass rounded-xl p-5 hover-lift relative group animate-fade-up" style={{animationDelay:`${0.06*i}s`}}>
+              <a href={link.url} target="_blank" rel="noopener noreferrer" className="no-underline flex items-center gap-4">
+                <div className="w-20 h-20 rounded-full bg-slate-100 dark:bg-slate-800 flex items-center justify-center overflow-hidden flex-shrink-0 ring-1 ring-black/5 dark:ring-white/5">
+                  {link.logo_url ? <img src={link.logo_url} alt="" className="w-full h-full object-cover" /> : <span className="text-slate-400 text-lg font-light">{link.name[0]}</span>}
                 </div>
-                {link.description && (
-                  <p className="text-sm text-gray-500 dark:text-gray-400">{link.description}</p>
-                )}
+                <div>
+                  <span className="text-base font-medium text-slate-800 dark:text-slate-200">{link.name}</span>
+                  {link.description && <p className="text-sm text-slate-400 font-light mt-1">{link.description}</p>}
+                </div>
               </a>
               {isAdmin && (
-                <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity flex gap-1">
-                  <button onClick={() => openEdit(link)} className="text-xs bg-gray-100 dark:bg-gray-700 px-2 py-0.5 rounded hover:bg-gray-200 dark:hover:bg-gray-600 cursor-pointer">编辑</button>
-                  <button onClick={() => handleDelete(link)} className="text-xs bg-red-50 dark:bg-red-900/30 text-red-600 dark:text-red-400 px-2 py-0.5 rounded hover:bg-red-100 cursor-pointer">删除</button>
+                <div className="absolute top-3 right-3 opacity-0 group-hover:opacity-100 transition-opacity flex gap-1">
+                  <button onClick={() => openEdit(link)} className="text-[10px] bg-slate-100 dark:bg-slate-800 px-2 py-0.5 rounded-lg hover:bg-slate-200 dark:hover:bg-slate-700 cursor-pointer text-slate-600 dark:text-slate-400">编辑</button>
+                  <button onClick={() => handleDelete(link)} className="text-[10px] bg-red-50 dark:bg-red-950/30 text-red-500 px-2 py-0.5 rounded-lg hover:bg-red-100 dark:hover:bg-red-950/50 cursor-pointer">删除</button>
                 </div>
               )}
             </div>
           ))}
-        </div>
-      )}
+        </div>}
     </div>
   );
 }

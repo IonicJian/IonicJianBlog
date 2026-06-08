@@ -1,0 +1,149 @@
+package auth
+
+import (
+	"errors"
+	"fmt"
+	"image"
+	"image/jpeg"
+	_ "image/gif"
+	_ "image/png"
+	"net/http"
+	_ "golang.org/x/image/webp"
+	"os"
+	"path/filepath"
+
+	"github.com/disintegration/imaging"
+	"github.com/gin-gonic/gin"
+	"github.com/google/uuid"
+	"github.com/zanelin/blog/internal/config"
+	"github.com/zanelin/blog/internal/dto/mapper"
+	"github.com/zanelin/blog/internal/dto/request"
+	dto "github.com/zanelin/blog/internal/dto/response"
+	"github.com/zanelin/blog/internal/middleware"
+	resp "github.com/zanelin/blog/internal/pkg/response"
+	authSvc "github.com/zanelin/blog/internal/service/auth"
+)
+
+type Handler struct {
+	authService authSvc.Service
+	cfg         *config.Config
+}
+
+func New(authService authSvc.Service, cfg *config.Config) *Handler {
+	return &Handler{authService: authService, cfg: cfg}
+}
+
+func (h *Handler) Register(c *gin.Context) {
+	var req request.RegisterRequest
+	if err := c.ShouldBindJSON(&req); err != nil { resp.BadRequest(c, err.Error()); return }
+	user, tokens, err := h.authService.Register(c.Request.Context(), req.Username, req.Email, req.Password)
+	if err != nil {
+		if errors.Is(err, authSvc.ErrUserExists) { resp.Error(c, http.StatusConflict, 409, "user already exists"); return }
+		resp.InternalError(c, err.Error()); return
+	}
+	resp.Success(c, dto.AuthResponse{User: mapper.UserToResponse(user), AccessToken: tokens.AccessToken, RefreshToken: tokens.RefreshToken, ExpiresIn: tokens.ExpiresIn})
+}
+
+func (h *Handler) Login(c *gin.Context) {
+	var req request.LoginRequest
+	if err := c.ShouldBindJSON(&req); err != nil { resp.BadRequest(c, err.Error()); return }
+	user, tokens, err := h.authService.Login(c.Request.Context(), req.Email, req.Password)
+	if err != nil {
+		if errors.Is(err, authSvc.ErrInvalidCredentials) { resp.Unauthorized(c, "invalid email or password"); return }
+		resp.InternalError(c, err.Error()); return
+	}
+	resp.Success(c, dto.AuthResponse{User: mapper.UserToResponse(user), AccessToken: tokens.AccessToken, RefreshToken: tokens.RefreshToken, ExpiresIn: tokens.ExpiresIn})
+}
+
+func (h *Handler) RefreshToken(c *gin.Context) {
+	var req request.RefreshTokenRequest
+	if err := c.ShouldBindJSON(&req); err != nil { resp.BadRequest(c, err.Error()); return }
+	tokens, err := h.authService.RefreshToken(c.Request.Context(), req.RefreshToken)
+	if err != nil { resp.Unauthorized(c, "invalid refresh token"); return }
+	resp.Success(c, gin.H{"access_token": tokens.AccessToken, "refresh_token": tokens.RefreshToken, "expires_in": tokens.ExpiresIn})
+}
+
+func (h *Handler) Logout(c *gin.Context) { resp.Success(c, nil) }
+
+func (h *Handler) GitHubLogin(c *gin.Context) {
+	authURL, state := h.authService.GetGitHubAuthURL()
+	isProduction := h.cfg.Server.Mode == "release"
+	c.SetCookie("oauth_state", state, 600, "/", "", isProduction, true)
+	c.Redirect(http.StatusTemporaryRedirect, authURL)
+}
+
+func (h *Handler) GitHubCallback(c *gin.Context) {
+	code := c.Query("code")
+	state := c.Query("state")
+	if code == "" { resp.BadRequest(c, "missing code"); return }
+	cookieState, _ := c.Cookie("oauth_state")
+	if state == "" || cookieState == "" || state != cookieState {
+		resp.Error(c, http.StatusForbidden, 403, "invalid oauth state"); return
+	}
+	user, tokens, err := h.authService.GitHubCallback(c.Request.Context(), code, state)
+	if err != nil {
+		c.Redirect(http.StatusTemporaryRedirect, fmt.Sprintf("%s/login?error=github_auth_failed", h.cfg.Server.FrontendURL))
+		return
+	}
+	redirectURL := fmt.Sprintf("%s/auth/callback?access_token=%s&refresh_token=%s&user_id=%d&role=%s",
+		h.cfg.Server.FrontendURL, tokens.AccessToken, tokens.RefreshToken, user.ID, user.Role)
+	c.Redirect(http.StatusTemporaryRedirect, redirectURL)
+}
+
+func (h *Handler) GetProfile(c *gin.Context) {
+	userID := c.GetInt64(middleware.ContextKeyUserID)
+	user, err := h.authService.GetUserByID(c.Request.Context(), userID)
+	if err != nil { resp.NotFound(c, "user not found"); return }
+	resp.Success(c, mapper.UserToResponse(user))
+}
+
+func (h *Handler) UpdateProfile(c *gin.Context) {
+	var req request.UpdateProfileRequest
+	if err := c.ShouldBindJSON(&req); err != nil { resp.BadRequest(c, err.Error()); return }
+	userID := c.GetInt64(middleware.ContextKeyUserID)
+	user, err := h.authService.UpdateProfile(c.Request.Context(), userID, req.DisplayName, req.Bio, req.AvatarURL)
+	if err != nil { resp.InternalError(c, err.Error()); return }
+	resp.Success(c, mapper.UserToResponse(user))
+}
+
+func (h *Handler) UploadAvatar(c *gin.Context) {
+	file, header, err := c.Request.FormFile("avatar")
+	if err != nil { resp.BadRequest(c, "please select an image file"); return }
+	defer file.Close()
+
+	ext := filepath.Ext(header.Filename)
+	allowed := map[string]bool{".jpg": true, ".jpeg": true, ".png": true, ".gif": true, ".webp": true}
+	if !allowed[ext] { resp.BadRequest(c, "only jpg/png/gif/webp formats are supported"); return }
+	if header.Size > 2*1024*1024 { resp.BadRequest(c, "image size must not exceed 2MB"); return }
+
+	uploadDir := "uploads/avatars"
+	if err := os.MkdirAll(uploadDir, 0755); err != nil { resp.InternalError(c, "failed to create upload directory"); return }
+
+	img, _, err := image.Decode(file)
+	if err != nil { resp.InternalError(c, "failed to decode image"); return }
+	resized := imaging.Fill(img, 256, 256, imaging.Center, imaging.Lanczos)
+
+	userID := c.GetInt64(middleware.ContextKeyUserID)
+	if oldUser, _ := h.authService.GetUserByID(c.Request.Context(), userID); oldUser != nil && oldUser.AvatarURL != "" {
+		os.Remove(filepath.Join("uploads/avatars", filepath.Base(oldUser.AvatarURL)))
+	}
+
+	filename := fmt.Sprintf("%d_%s.jpg", userID, uuid.New().String()[:8])
+	savePath := filepath.Join(uploadDir, filename)
+	dst, err := os.Create(savePath)
+	if err != nil { resp.InternalError(c, "failed to save file"); return }
+	defer dst.Close()
+
+	if err := jpeg.Encode(dst, resized, &jpeg.Options{Quality: 85}); err != nil { resp.InternalError(c, "failed to encode image"); return }
+
+	avatarURL := "/uploads/avatars/" + filename
+	user, err := h.authService.UpdateProfile(c.Request.Context(), userID, "", "", avatarURL)
+	if err != nil { resp.InternalError(c, "failed to update avatar"); return }
+	resp.Success(c, gin.H{"avatar_url": avatarURL, "user": mapper.UserToResponse(user)})
+}
+
+func (h *Handler) GetSiteOwner(c *gin.Context) {
+	user, err := h.authService.GetSiteOwner(c.Request.Context())
+	if err != nil { resp.NotFound(c, "site owner not found"); return }
+	resp.Success(c, mapper.UserToResponse(user))
+}

@@ -36,7 +36,20 @@ type Blog struct {
 	Author     *User  `json:"author,omitempty"`
 	LikeCount  int64  `json:"like_count"`
 	LikedByMe  bool   `json:"liked_by_me"`
-	Tags       []*Tag `json:"tags,omitempty"`
+	CategoryID *int64    `json:"category_id,omitempty"`
+	Category   *Category `json:"category,omitempty"`
+	Tags       []*Tag    `json:"tags,omitempty"`
+}
+
+type Category struct {
+	ID          int64       `json:"id"`
+	Name        string      `json:"name"`
+	Slug        string      `json:"slug"`
+	Description string      `json:"description"`
+	SortOrder   int         `json:"sort_order"`
+	ParentID    *int64      `json:"parent_id,omitempty"`
+	Children    []*Category `json:"children,omitempty"`
+	CreatedAt   time.Time   `json:"created_at"`
 }
 
 type Tag struct {

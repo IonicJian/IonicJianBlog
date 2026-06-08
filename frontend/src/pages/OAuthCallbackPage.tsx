@@ -20,7 +20,7 @@ export default function OAuthCallbackPage() {
   }, [params, navigate, handleOAuthCallback]);
 
   return (
-    <div className="py-20 text-center text-gray-400 dark:text-gray-500">
+    <div className="py-20 text-center text-slate-400 dark:text-slate-400">
       登录中...
     </div>
   );

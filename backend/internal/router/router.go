@@ -3,20 +3,26 @@ package router
 import (
 	"github.com/gin-gonic/gin"
 	"github.com/zanelin/blog/internal/config"
-	"github.com/zanelin/blog/internal/handler"
+	"github.com/zanelin/blog/internal/handler/auth"
+	"github.com/zanelin/blog/internal/handler/blog"
+	"github.com/zanelin/blog/internal/handler/content"
+	"github.com/zanelin/blog/internal/handler/social"
+	"github.com/zanelin/blog/internal/handler/trending"
+	"github.com/zanelin/blog/internal/handler/user"
 	"github.com/zanelin/blog/internal/middleware"
 )
 
 type Handlers struct {
-	Auth       *handler.AuthHandler
-	User       *handler.UserHandler
-	Blog       *handler.BlogHandler
-	Comment    *handler.CommentHandler
-	Like       *handler.LikeHandler
-	Tag        *handler.TagHandler
-	FriendLink *handler.FriendLinkHandler
-	Guestbook  *handler.GuestbookHandler
-	AI         *handler.AIHandler
+	Auth       *auth.Handler
+	User       *user.Handler
+	Blog       *blog.Handler
+	Comment    *social.CommentHandler
+	Like       *social.LikeHandler
+	Tag        *content.TagHandler
+	FriendLink *content.FriendLinkHandler
+	Guestbook  *social.GuestbookHandler
+	Trending   *trending.Handler
+	Category   *content.CategoryHandler
 }
 
 func Setup(r *gin.Engine, h *Handlers, cfg *config.Config) {
@@ -31,14 +37,21 @@ func Setup(r *gin.Engine, h *Handlers, cfg *config.Config) {
 		c.JSON(200, gin.H{"status": "ok"})
 	})
 
+	// Site owner
+	api.GET("/site/owner", h.Auth.GetSiteOwner)
+
+	// Rate limiters
+	loginLimiter := middleware.RateLimit(10, 10.0/60.0)    // 10 req/min
+	registerLimiter := middleware.RateLimit(5, 5.0/60.0)   // 5 req/min
+
 	// Public auth routes
-	auth := api.Group("/auth")
+	authGroup := api.Group("/auth")
 	{
-		auth.POST("/register", h.Auth.Register)
-		auth.POST("/login", h.Auth.Login)
-		auth.POST("/refresh", h.Auth.RefreshToken)
-		auth.GET("/github", h.Auth.GitHubLogin)
-		auth.GET("/github/callback", h.Auth.GitHubCallback)
+		authGroup.POST("/register", registerLimiter, h.Auth.Register)
+		authGroup.POST("/login", loginLimiter, h.Auth.Login)
+		authGroup.POST("/refresh", h.Auth.RefreshToken)
+		authGroup.GET("/github", h.Auth.GitHubLogin)
+		authGroup.GET("/github/callback", h.Auth.GitHubCallback)
 	}
 
 	// Auth-protected routes (any logged-in user)
@@ -49,6 +62,8 @@ func Setup(r *gin.Engine, h *Handlers, cfg *config.Config) {
 		authRequired.GET("/users/me", h.Auth.GetProfile)
 		authRequired.PUT("/users/me", h.Auth.UpdateProfile)
 		authRequired.PUT("/users/me/avatar", h.Auth.UpdateProfile)
+		authRequired.POST("/users/me/avatar/upload", h.Auth.UploadAvatar)
+		authRequired.POST("/upload/image", blog.UploadImage)
 
 		authRequired.POST("/blogs/:id/comments", h.Comment.Create)
 		authRequired.DELETE("/comments/:id", h.Comment.Delete)
@@ -62,7 +77,7 @@ func Setup(r *gin.Engine, h *Handlers, cfg *config.Config) {
 		authRequired.DELETE("/guestbook/:id", h.Guestbook.Delete)
 	}
 
-	// Admin-only routes (blog CRUD, tags, friend links, AI)
+	// Admin-only routes
 	adminRequired := api.Group("")
 	adminRequired.Use(middleware.RequiredAuth(cfg.JWT.Secret), middleware.RequireAdmin())
 	{
@@ -73,10 +88,15 @@ func Setup(r *gin.Engine, h *Handlers, cfg *config.Config) {
 		adminRequired.POST("/tags", h.Tag.Create)
 		adminRequired.PUT("/tags/:id", h.Tag.Update)
 		adminRequired.DELETE("/tags/:id", h.Tag.Delete)
+
 		adminRequired.POST("/friend-links", h.FriendLink.Create)
 		adminRequired.PUT("/friend-links/:id", h.FriendLink.Update)
 		adminRequired.DELETE("/friend-links/:id", h.FriendLink.Delete)
-		adminRequired.POST("/blogs/:id/summary", h.AI.GenerateSummary)
+
+		adminRequired.POST("/blogs/:id/summary", h.Trending.GenerateSummary)
+		adminRequired.POST("/categories", h.Category.Create)
+		adminRequired.PUT("/categories/:id", h.Category.Update)
+		adminRequired.DELETE("/categories/:id", h.Category.Delete)
 	}
 
 	// Public + optionally authenticated routes
@@ -93,8 +113,9 @@ func Setup(r *gin.Engine, h *Handlers, cfg *config.Config) {
 		optionalAuth.GET("/tags", h.Tag.List)
 		optionalAuth.GET("/friend-links", h.FriendLink.List)
 		optionalAuth.GET("/guestbook", h.Guestbook.List)
-		optionalAuth.GET("/blogs/:id/summary", h.AI.GetSummary)
-		optionalAuth.GET("/trending/github", h.AI.GetGithubTrending)
+		optionalAuth.GET("/blogs/:id/summary", h.Trending.GetSummary)
+		optionalAuth.GET("/trending/github", h.Trending.GetGithubTrending)
+		optionalAuth.GET("/categories", h.Category.List)
 		optionalAuth.GET("/users/:id", h.User.GetUser)
 	}
 }

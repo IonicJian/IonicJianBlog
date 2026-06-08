@@ -2,6 +2,7 @@ package config
 
 import (
 	"bufio"
+	"fmt"
 	"os"
 	"strings"
 	"time"
@@ -74,6 +75,7 @@ type AIConfig struct {
 func Load() (*Config, error) {
 	loadEnvFile(".env")
 	loadEnvFile("../.env")
+	loadEnvFile("backend/.env")
 
 	viper.AutomaticEnv()
 
@@ -81,7 +83,7 @@ func Load() (*Config, error) {
 	viper.SetDefault("SERVER_MODE", "debug")
 	viper.SetDefault("SERVER_FRONTEND_URL", "http://localhost:5173")
 	viper.SetDefault("DATABASE_DSN", "postgres://blog_user:blog_password@localhost:5432/blog?sslmode=disable")
-	viper.SetDefault("JWT_SECRET", "dev-secret-change-in-production")
+	// JWT_SECRET is required — no default
 	viper.SetDefault("JWT_ACCESS_EXPIRY", "15m")
 	viper.SetDefault("JWT_REFRESH_EXPIRY", "168h")
 	viper.SetDefault("AI_PROVIDER", "openai")
@@ -96,7 +98,7 @@ func Load() (*Config, error) {
 		return nil, err
 	}
 
-	return &Config{
+	cfg := &Config{
 		Server: ServerConfig{
 			Port:        viper.GetString("SERVER_PORT"),
 			Mode:        viper.GetString("SERVER_MODE"),
@@ -121,5 +123,11 @@ func Load() (*Config, error) {
 			APIKey:   viper.GetString("AI_API_KEY"),
 			Model:    viper.GetString("AI_MODEL"),
 		},
-	}, nil
+	}
+
+	if cfg.JWT.Secret == "" || cfg.JWT.Secret == "dev-secret-change-in-production" {
+		return nil, fmt.Errorf("JWT_SECRET is required and must not use the default value")
+	}
+
+	return cfg, nil
 }

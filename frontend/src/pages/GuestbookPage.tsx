@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
+import { Link } from 'react-router-dom';
 import { useAuthStore } from '../store/authStore';
 import { guestbookApi, type GuestbookMessage } from '../api/guestbook';
 
@@ -9,92 +10,65 @@ export default function GuestbookPage() {
   const [page, setPage] = useState(1);
   const [loading, setLoading] = useState(true);
   const [content, setContent] = useState('');
-  const [nickname, setNickname] = useState('');
+  const [nickname, _setNickname] = useState('');
+  const [anonymous, setAnonymous] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
 
   const fetchMessages = useCallback(() => {
     setLoading(true);
-    guestbookApi.list(page).then((res) => {
-      setMessages(res.data.data.items || []);
-      setTotal(res.data.data.total);
-    }).catch(() => {}).finally(() => setLoading(false));
+    guestbookApi.list(page).then((res) => { setMessages(res.data.data.items || []); setTotal(res.data.data.total); }).catch(() => {}).finally(() => setLoading(false));
   }, [page]);
-
   useEffect(() => { fetchMessages(); }, [fetchMessages]);
 
   const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!content.trim()) return;
-    setSubmitting(true);
-    setError('');
-    try {
-      await guestbookApi.create(nickname.trim() || user?.username || '匿名', content.trim());
-      setContent('');
-      if (page === 1) fetchMessages(); else setPage(1);
-    } catch (err: any) {
-      setError(err.response?.data?.message || '发送失败');
-    } finally {
-      setSubmitting(false);
-    }
+    e.preventDefault(); if (!content.trim()) return; setSubmitting(true); setError('');
+    try { await guestbookApi.create(anonymous ? '匿名' : (nickname.trim() || user?.username || '匿名'), content.trim()); setContent(''); if (page === 1) fetchMessages(); else setPage(1); } catch (err: any) { setError(err.response?.data?.message || '发送失败'); } finally { setSubmitting(false); }
   };
-
   const totalPages = Math.ceil(total / 20);
 
   return (
-    <div className="py-8 max-w-2xl mx-auto">
-      <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-100 mb-6">留言墙</h1>
+    <div className="py-10 page-enter max-w-2xl mx-auto">
+      <h1 className="font-bold text-3xl text-slate-800 dark:text-slate-100 mb-1">留言墙</h1>
+      <p className="text-sm text-slate-400 dark:text-slate-500 font-light mb-10">留下你的足迹</p>
 
-      {/* Form */}
-      <form onSubmit={handleSubmit} className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-4 mb-6 space-y-3">
-        {error && <div className="bg-red-50 dark:bg-red-900/30 text-red-700 dark:text-red-400 px-3 py-2 rounded text-sm">{error}</div>}
-        {!user && (
-          <input
-            type="text" value={nickname} onChange={(e) => setNickname(e.target.value)}
-            placeholder="你的昵称（选填）"
-            className="w-full border border-gray-200 dark:border-gray-600 rounded-md px-3 py-2 text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
-          />
-        )}
-        <textarea
-          value={content} onChange={(e) => setContent(e.target.value)}
-          placeholder="留下你想说的话..."
-          rows={3} required
-          className="w-full border border-gray-200 dark:border-gray-600 rounded-md px-3 py-2 text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 resize-y"
-        />
-        <button type="submit" disabled={submitting || !content.trim()}
-          className="bg-blue-600 text-white px-5 py-2 rounded-md text-sm hover:bg-blue-700 disabled:opacity-50 cursor-pointer">
-          {submitting ? '发送中...' : '留言'}
-        </button>
-      </form>
-
-      {/* Messages */}
-      {loading ? (
-        <div className="text-center py-8 text-gray-400 dark:text-gray-500 text-sm">加载中...</div>
-      ) : messages.length === 0 ? (
-        <div className="text-center py-8 text-gray-400 dark:text-gray-500 text-sm">暂无留言，来留下第一条吧！</div>
-      ) : (
-        <div className="space-y-3">
-          {messages.map((msg) => (
-            <div key={msg.id} className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-4">
-              <div className="flex items-center gap-2 mb-1.5">
-                <span className="font-medium text-sm text-gray-900 dark:text-gray-100">
-                  {msg.nickname || '匿名'}
-                </span>
-                <span className="text-xs text-gray-400">{new Date(msg.created_at).toLocaleDateString('zh-CN')}</span>
-              </div>
-              <p className="text-sm text-gray-700 dark:text-gray-300 whitespace-pre-wrap">{msg.content}</p>
-            </div>
-          ))}
+      {!user ? (
+        <div className="glass rounded-xl p-8 text-center">
+          <p className="text-slate-500 dark:text-slate-400 font-light mb-4">登录后即可留言</p>
+          <Link to="/login" className="btn-primary no-underline">登录</Link>
         </div>
+      ) : (
+      <form onSubmit={handleSubmit} className="glass rounded-xl p-6 hover-lift mb-8 space-y-4 animate-scale-in">
+        {error && <div className="bg-red-50/80 dark:bg-red-950/30 text-red-600 dark:text-red-400 px-4 py-3 rounded-xl text-xs font-light">{error}</div>}
+        <textarea value={content} onChange={e => setContent(e.target.value)} placeholder="留下你想说的话..." rows={3} required className="w-full bg-transparent border border-black/5 dark:border-white/5 rounded-xl px-4 py-3 text-sm text-slate-800 dark:text-slate-200 placeholder-slate-300 dark:placeholder-slate-600 focus:outline-none focus:border-amber-500/50 resize-y font-light" />
+        <div className="flex items-center justify-between">
+          <label className="flex items-center gap-2 text-xs text-slate-400 font-light cursor-pointer">
+            <input type="checkbox" checked={anonymous} onChange={e => setAnonymous(e.target.checked)} className="rounded" />
+            匿名发送
+          </label>
+          <button type="submit" disabled={submitting || !content.trim()} className="btn-primary">{submitting ? '发送中...' : '留言'}</button>
+        </div>
+      </form>
       )}
 
+      {loading ? <p className="text-center py-16 text-slate-400 font-light">加载中...</p>
+      : messages.length === 0 ? <p className="text-center py-16 text-slate-400 font-light">暂无留言，来留下第一条吧</p>
+      : <div className="space-y-3">
+          {messages.map(msg => (
+            <div key={msg.id} className="glass rounded-xl p-5 hover-lift animate-fade-up">
+              <div className="flex items-center gap-3 mb-2">
+                <span className="text-sm font-medium text-slate-800 dark:text-slate-200">{msg.nickname || '匿名'}</span>
+                <span className="text-xs text-slate-400 font-light">{new Date(msg.created_at).toLocaleDateString('zh-CN')}</span>
+              </div>
+              <p className="text-sm text-slate-600 dark:text-slate-400 font-light whitespace-pre-wrap leading-relaxed">{msg.content}</p>
+            </div>
+          ))}
+        </div>}
+
       {totalPages > 1 && (
-        <div className="flex justify-center gap-2 mt-6">
-          {Array.from({ length: totalPages }, (_, i) => (
-            <button key={i} onClick={() => setPage(i + 1)}
-              className={`px-3 py-1 rounded text-xs cursor-pointer ${page === i + 1 ? 'bg-blue-600 text-white' : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-200'}`}>
-              {i + 1}
-            </button>
+        <div className="flex justify-center gap-2 mt-10">
+          {Array.from({length: totalPages}, (_, i) => (
+            <button key={i} onClick={() => setPage(i+1)} className={`w-8 h-8 rounded-lg text-xs font-light cursor-pointer border transition-colors ${page===i+1?'bg-slate-800 dark:bg-slate-200 text-white dark:text-slate-800 border-transparent':'border-black/5 dark:border-white/10 text-slate-500 hover:border-black/15'}`}>{i+1}</button>
           ))}
         </div>
       )}
