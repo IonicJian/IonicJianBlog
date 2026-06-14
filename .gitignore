@@ -6,6 +6,9 @@ backend/vendor/
 frontend/dist/
 backend/server
 
+# Uploads (runtime user data)
+backend/uploads/
+
 # Environment
 .env
 .env.local
@@ -35,5 +38,12 @@ backups/
 
 # CodeGraph
 .codegraph/
+
+# Claude Code
+.claude/settings.local.json
+memory/
+
+# Chrome DevTools snapshots
+blog-*-snap.yml
 
 .claudeignore
