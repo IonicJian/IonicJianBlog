@@ -1,0 +1,2 @@
+-- Admin user removal is handled by deleting via API or DB.
+-- No schema changes to revert.

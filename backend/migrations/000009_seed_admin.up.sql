@@ -1,0 +1,4 @@
+-- Admin user is seeded by Go code on startup (see cmd/server/main.go seedAdmin).
+-- This migration exists only for tracking — the actual INSERT happens in Go
+-- so the bcrypt password hash can be generated dynamically from ADMIN_EMAIL/ADMIN_PASSWORD env vars.
+-- No SQL changes needed here.

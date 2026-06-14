@@ -1,0 +1,49 @@
+# Dependencies
+node_modules/
+backend/vendor/
+
+# Build output
+frontend/dist/
+backend/server
+
+# Uploads (runtime user data)
+backend/uploads/
+
+# Environment
+.env
+.env.local
+.env.production
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+
+# Docker
+postgres_data/
+
+# Backups
+backups/
+
+# Go
+
+# CodeGraph
+.codegraph/
+
+# Claude Code
+.claude/settings.local.json
+memory/
+
+# Chrome DevTools snapshots
+blog-*-snap.yml
+
+.claudeignore
