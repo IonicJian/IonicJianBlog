@@ -29,4 +29,6 @@ Thumbs.db
 postgres_data/
 
 # Go
-backend/go.sum
+
+# CodeGraph
+.codegraph/

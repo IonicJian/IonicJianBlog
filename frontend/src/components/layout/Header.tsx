@@ -8,10 +8,7 @@ export default function Header() {
   const { isAuthenticated, user } = useAuthStore();
   const { theme, toggleTheme } = useUIStore();
   return (
-    <header
-      className="fixed top-0 left-0 right-0 z-50 glass-strong transition-all duration-500"
-      style={{ borderRadius: 0 }}
-    >
+    <header className="fixed top-0 left-0 right-0 z-50 glass-strong">
       <div className="max-w-5xl mx-auto px-6 flex items-center justify-between h-14">
         <Link
           to="/"

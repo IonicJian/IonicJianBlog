@@ -109,7 +109,7 @@ export default function HomePage() {
           <div className="w-8 h-px bg-amber-500/40 my-6 animate-fade-up stagger-3" />
 
           <p className="text-sm text-slate-400 dark:text-slate-500 font-light animate-fade-up stagger-3">
-            思考 · 构建 · 分享
+            笔记 · 随想 · 分享
           </p>
         </div>
       </div>
@@ -120,10 +120,12 @@ export default function HomePage() {
         onMouseEnter={cancelClose}
         onMouseLeave={closePanel}
       >
-        {([
-          { key: "recommended", label: "推荐阅读" },
-          { key: "latest", label: "最新文章" },
-        ] as { key: Tab; label: string }[]).map(({ key, label }) => (
+        {(
+          [
+            { key: "recommended", label: "推荐阅读" },
+            { key: "latest", label: "最新文章" },
+          ] as { key: Tab; label: string }[]
+        ).map(({ key, label }) => (
           <button
             key={key}
             className={`group relative bg-transparent border border-transparent cursor-pointer inline-flex flex-col items-center justify-center w-44 pt-2.5 pb-1.5 rounded-t-xl transition-all duration-300 ${
