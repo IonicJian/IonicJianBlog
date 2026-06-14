@@ -17,6 +17,9 @@ Backend: `http://localhost:8080` · Frontend: `http://localhost:5173`
 see @docs/Implementation.md for API description, db interface and funtion implementations
 see @docs/test.md for testing requirements
 see @docs/diff.md for diff
+see @docs/skills.md for available skills and their usage
+see @docs/mcp.md for MCP server tools (CodeGraph, Chrome DevTools, Context7)
+see @docs/plugins.md for plugin management
 
 # 任何项目都务必遵守的规则（极其重要！！！）
 
@@ -70,6 +73,33 @@ see @docs/diff.md for diff
 - 严禁使用 commonjs 模块系统
 - 尽可能使用 TypeScript。只有在构建工具完全不支持 TypeScript 的时候，才使用 JavaScript
 - 数据结构尽可能全部定义成强类型。如果个别场景不得不使用 any 或未经结构化定义的 json，需要先停下来征求用户的同意
+
+## Go / Gin / pgx
+
+- Go 版本 ≥ 1.22，使用 go mod 管理依赖
+- 后端分层：handler → service → repository，单向依赖，禁止反向引用
+- 接口定义与实现在同一文件（Go 惯例），每个领域子包用独立接口名避免冲突
+- 所有 SQL 查询使用参数化（`$1, $2`），严禁字符串拼接防 SQL 注入
+- 错误处理：repository 返回原始 error，service 包装为业务错误，handler 映射 HTTP 状态码
+- 在 `backend/` 目录下运行所有 go 命令
+
+## CodeGraph 代码智能
+
+本项目已索引 CodeGraph（`.codegraph/` 目录存在）。**理解或定位代码时优先使用 CodeGraph：**
+
+- `codegraph_explore` — 一次调用返回相关符号源码 + 调用路径，替代多次 grep/read
+- `codegraph_node` — 读取单个符号或文件的源码 + 调用者
+- `codegraph_search` — 按名称搜索符号
+
+**原则：** `codegraph_explore` > `codegraph_node` > `grep/Read`。不要开着 CodeGraph 不用然后自己做 grep。
+
+## Git 提交规范
+
+- 提交信息使用英文，格式：`type(scope): description`
+- 类型：`feat`, `fix`, `refactor`, `style`, `docs`, `test`, `chore`
+- 范围：`backend`, `frontend`, 或具体模块
+- 每次提交以 `Co-Authored-By: Claude <noreply@anthropic.com>` 结尾
+- 提交前确保：`go build ./...` / `go vet ./...` / `npx tsc --noEmit` / `npx vite build` 全部通过
 
 ## 远程提交
 注意替换含敏感信息的文件（如API-key,用户信息等）
