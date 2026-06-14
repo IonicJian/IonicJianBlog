@@ -22,6 +22,9 @@ export const authApi = {
       { refresh_token: refreshToken },
     ),
 
+  exchangeCode: (code: string) =>
+    apiClient.post<ApiResponse<AuthData>>('/auth/exchange-code', { code }),
+
   getProfile: () => apiClient.get<ApiResponse<User>>('/users/me'),
 
   updateProfile: (data: { display_name?: string; bio?: string; avatar_url?: string }) =>
