@@ -60,14 +60,11 @@ export default function BlogListPage() {
 
   const loadData = () => {
     setLoading(true);
-    if (activeTab === 'recommended') {
-      blogApi.list({ page: 1, page_size: 50, sort: 'popular' })
-        .then(res => { setBlogs(res.data.data.items || []); setTotal(res.data.data.total); })
-        .finally(() => setLoading(false));
-    } else if (search) {
+    const sort = activeTab === 'recommended' ? 'popular' : 'latest';
+    if (search) {
       blogApi.search(search, page).then(res => { setBlogs(res.data.data.items || []); setTotal(res.data.data.total); }).finally(() => setLoading(false));
     } else {
-      const params: any = { page, page_size: 10, sort: 'latest' };
+      const params: any = { page, page_size: 10, sort };
       if (activeTags.length > 0) params.tag = activeTags.join(',');
       if (activeCat) params.category = activeCat;
       blogApi.list(params).then(res => { setBlogs(res.data.data.items || []); setTotal(res.data.data.total); }).finally(() => setLoading(false));
@@ -79,7 +76,7 @@ export default function BlogListPage() {
 
   const handleTagClick = (slug: string) => { setActiveTags(prev => prev.includes(slug) ? prev.filter(s => s !== slug) : [...prev, slug]); setPage(1); };
   const handleCreateTag = async () => { if (!newTagName.trim()) return; setTagSaving(true); try { await tagApi.create({ name: newTagName.trim(), color: newTagColor }); setNewTagName(''); setShowTagForm(false); loadData(); } catch {} finally { setTagSaving(false); } };
-  const totalPages = activeTab === 'recommended' ? 0 : Math.ceil(total / 10);
+  const totalPages = Math.ceil(total / 10);
   const presetColors = ['#d97706','#ef4444','#3b82f6','#10b981','#8b5cf6','#ec4899','#6366f1','#14b8a6'];
 
   return (
@@ -126,9 +123,7 @@ export default function BlogListPage() {
         </aside>
 
         <div className="flex-1 min-w-0">
-          {activeTab === 'latest' && (
-            <input type="text" value={search} onChange={e => { setSearch(e.target.value); setPage(1); }} placeholder="搜索文章..." className="input-underline mb-8" />
-          )}
+          <input type="text" value={search} onChange={e => { setSearch(e.target.value); setPage(1); }} placeholder="搜索文章..." className="input-underline mb-8" />
           {loading ? <p className="text-center py-16 text-slate-400 font-light">加载中...</p>
           : blogs.length === 0 ? <p className="text-center py-16 text-slate-400 font-light">暂无文章</p>
           : <div className="space-y-3">
