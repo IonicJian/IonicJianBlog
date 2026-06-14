@@ -32,3 +32,5 @@ postgres_data/
 
 # CodeGraph
 .codegraph/
+
+.claudeignore
