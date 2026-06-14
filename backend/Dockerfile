@@ -1,5 +1,6 @@
 # Dev stage — used by docker-compose.yml
 FROM golang:1.26-alpine AS dev
+ENV GOPROXY=https://goproxy.cn,direct
 RUN apk --no-cache add git
 RUN go install github.com/air-verse/air@latest
 WORKDIR /app
@@ -9,6 +10,7 @@ CMD ["air", "-c", ".air.toml"]
 
 # Build stage
 FROM golang:1.26-alpine AS build
+ENV GOPROXY=https://goproxy.cn,direct
 WORKDIR /app
 COPY go.mod go.sum ./
 RUN go mod download
