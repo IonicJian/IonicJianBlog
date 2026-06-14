@@ -6,6 +6,7 @@ import { useAuthStore } from '../../store/authStore';
 import type { BlogListItem, Tag } from '../../types/blog';
 import BlogCard from '../../components/common/BlogCard';
 
+type Tab = 'latest' | 'recommended';
 
 function CategoryItem({ cat, activeCat, onClick, setPage, depth, isAdmin, onDelete }: { cat: any; activeCat: string; onClick: (s: string) => void; setPage: (n: number) => void; depth: number; isAdmin?: boolean; onDelete?: (id: number) => void }) {
   const [expanded, setExpanded] = useState(false);
@@ -51,6 +52,7 @@ export default function BlogListPage() {
   const [search, setSearch] = useState('');
   const [activeTags, setActiveTags] = useState<string[]>([]);
   const [activeCat, setActiveCat] = useState('');
+  const [activeTab, setActiveTab] = useState<Tab>('latest');
   const [showTagForm, setShowTagForm] = useState(false);
   const [newTagName, setNewTagName] = useState('');
   const [newTagColor, setNewTagColor] = useState('#d97706');
@@ -58,10 +60,14 @@ export default function BlogListPage() {
 
   const loadData = () => {
     setLoading(true);
-    const params: any = { page, page_size: 10 };
-    if (search) {
+    if (activeTab === 'recommended') {
+      blogApi.list({ page: 1, page_size: 50, sort: 'popular' })
+        .then(res => { setBlogs(res.data.data.items || []); setTotal(res.data.data.total); })
+        .finally(() => setLoading(false));
+    } else if (search) {
       blogApi.search(search, page).then(res => { setBlogs(res.data.data.items || []); setTotal(res.data.data.total); }).finally(() => setLoading(false));
     } else {
+      const params: any = { page, page_size: 10, sort: 'latest' };
       if (activeTags.length > 0) params.tag = activeTags.join(',');
       if (activeCat) params.category = activeCat;
       blogApi.list(params).then(res => { setBlogs(res.data.data.items || []); setTotal(res.data.data.total); }).finally(() => setLoading(false));
@@ -69,19 +75,43 @@ export default function BlogListPage() {
     tagApi.list().then(r => setTags(r.data.data || [])).catch(() => {});
     categoryApi.list().then(r => setCats(r.data.data || [])).catch(() => {});
   };
-  useEffect(() => { loadData(); }, [page, search, activeTags, activeCat]);
+  useEffect(() => { loadData(); }, [page, search, activeTags, activeCat, activeTab]);
 
   const handleTagClick = (slug: string) => { setActiveTags(prev => prev.includes(slug) ? prev.filter(s => s !== slug) : [...prev, slug]); setPage(1); };
   const handleCreateTag = async () => { if (!newTagName.trim()) return; setTagSaving(true); try { await tagApi.create({ name: newTagName.trim(), color: newTagColor }); setNewTagName(''); setShowTagForm(false); loadData(); } catch {} finally { setTagSaving(false); } };
-  const totalPages = Math.ceil(total / 10);
+  const totalPages = activeTab === 'recommended' ? 0 : Math.ceil(total / 10);
   const presetColors = ['#d97706','#ef4444','#3b82f6','#10b981','#8b5cf6','#ec4899','#6366f1','#14b8a6'];
 
   return (
     <div className="py-8 page-enter">
       <h1 className="font-bold text-3xl text-slate-800 dark:text-slate-100 mb-1">博客</h1>
       <p className="text-sm text-slate-400 dark:text-slate-500 font-light mb-8">思考与记录</p>
+
+      {/* Tab switcher */}
+      <div className="flex items-center gap-1 mb-6">
+        {([
+          { key: 'latest', label: '最新文章' },
+          { key: 'recommended', label: '推荐阅读' },
+        ] as { key: Tab; label: string }[]).map(({ key, label }) => (
+          <button
+            key={key}
+            onClick={() => { if (key !== activeTab) { setActiveTab(key); setPage(1); setSearch(''); setActiveCat(''); setActiveTags([]); } }}
+            className={`relative px-4 py-1.5 text-sm font-light cursor-pointer bg-transparent rounded-lg transition-colors ${
+              activeTab === key
+                ? 'text-amber-600 dark:text-amber-500'
+                : 'text-slate-400 hover:text-slate-600 dark:hover:text-slate-300'
+            }`}
+          >
+            {label}
+            {activeTab === key && (
+              <span className="absolute bottom-0 left-1/2 -translate-x-1/2 w-1/2 h-0.5 bg-amber-500 rounded-full" />
+            )}
+          </button>
+        ))}
+      </div>
+
       <div className="flex gap-10">
-              <aside className="hidden lg:block w-48 flex-shrink-0">
+        <aside className="hidden lg:block w-48 flex-shrink-0">
           <div className="glass rounded-xl p-5 hover-lift sticky top-20">
             <h3 className="text-[10px] font-medium tracking-[0.2em] text-slate-400 uppercase mb-4">分类</h3>
             {cats.length === 0 ? <p className="text-xs text-slate-400 font-light">暂无</p> : <ul className="space-y-1.5">{cats.map(c => <CategoryItem key={c.id} cat={c} activeCat={activeCat} onClick={setActiveCat} setPage={setPage} depth={0} isAdmin={isAdmin} onDelete={(id) => { categoryApi.delete(id).then(() => loadData()).catch(()=>{}); }} />)}</ul>}
@@ -94,8 +124,11 @@ export default function BlogListPage() {
             </div>}
           </div>
         </aside>
-<div className="flex-1 min-w-0">
-          <input type="text" value={search} onChange={e => { setSearch(e.target.value); setPage(1); }} placeholder="搜索文章..." className="input-underline mb-8" />
+
+        <div className="flex-1 min-w-0">
+          {activeTab === 'latest' && (
+            <input type="text" value={search} onChange={e => { setSearch(e.target.value); setPage(1); }} placeholder="搜索文章..." className="input-underline mb-8" />
+          )}
           {loading ? <p className="text-center py-16 text-slate-400 font-light">加载中...</p>
           : blogs.length === 0 ? <p className="text-center py-16 text-slate-400 font-light">暂无文章</p>
           : <div className="space-y-3">
@@ -111,7 +144,6 @@ export default function BlogListPage() {
             </div>
           )}
         </div>
-  
       </div>
     </div>
   );

@@ -23,9 +23,11 @@ func New(blogService blogSvc.Service) *Handler { return &Handler{blogService: bl
 func (h *Handler) List(c *gin.Context) {
 	p := pagination.Parse(c)
 	status := c.DefaultQuery("status", "published")
+	sort := c.DefaultQuery("sort", "latest")
 	opts := blogRepo.ListOptions{
 		Page: p.Page, PageSize: p.PageSize, Status: status,
 		TagSlug: c.Query("tag"), CategorySlug: c.Query("category"),
+		Sort: sort,
 	}
 	blogs, total, err := h.blogService.List(c.Request.Context(), opts)
 	if err != nil { resp.InternalError(c, err.Error()); return }

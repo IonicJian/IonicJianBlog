@@ -25,10 +25,9 @@
       "Bash(DATABASE_DSN=\"postgres://blog_user:blog_password@localhost:5432/blog?sslmode=disable\" /tmp/blog-server)",
       "Bash(curl -s http://localhost:8080/api/v1/health)",
       "Bash(curl -s -o /dev/null -w \"HTTP %{http_code}\" http://localhost:5173)",
-      "Bash(awk '{print \"- \" $2}')"
+      "Bash(awk '{print \"- \" $2}')",
+      "Bash(curl -s -o /dev/null -w \"frontend: %{http_code}\" http://localhost:5173)"
     ]
   },
-  "enabledPlugins": {
-    "superpowers@superpowers-marketplace": false
-  }
+  "enabledPlugins": {}
 }

@@ -4,7 +4,7 @@ import type { Blog, BlogListItem, Tag } from '../types/blog';
 import type { Category } from '../types/category';
 
 export const blogApi = {
-  list: (params?: { page?: number; page_size?: number; tag?: string; category?: string }) =>
+  list: (params?: { page?: number; page_size?: number; tag?: string; category?: string; sort?: string }) =>
     apiClient.get<ApiResponse<PaginatedResponse<BlogListItem>>>('/blogs', { params }),
 
   search: (q: string, page = 1, pageSize = 20) =>

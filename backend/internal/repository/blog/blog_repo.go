@@ -30,6 +30,7 @@ type ListOptions struct {
 	TagSlug      string
 	CategorySlug string
 	UserID       *int64
+	Sort         string // "latest" (default) or "popular"
 }
 
 type blogRepo struct{ db *pgxpool.Pool }
@@ -172,12 +173,16 @@ func (r *blogRepo) List(ctx context.Context, opts ListOptions) ([]*model.Blog, i
 	var total int64
 	r.db.QueryRow(ctx, fmt.Sprintf("SELECT COUNT(*) FROM blogs b %s", whereClause), args...).Scan(&total)
 	offset := (opts.Page - 1) * opts.PageSize
+	orderClause := "b.is_top DESC, b.created_at DESC"
+	if opts.Sort == "popular" {
+		orderClause = "b.is_top DESC, b.view_count DESC, b.created_at DESC"
+	}
 	query := fmt.Sprintf(
 		`SELECT b.id, b.user_id, b.title, b.slug, b.excerpt, b.cover_image,
 		 b.status, b.view_count, b.is_top, b.category_id, b.created_at, b.updated_at,
 		 COALESCE((SELECT COUNT(*) FROM likes WHERE target_type='blog' AND target_id=b.id),0) AS like_count
-		 FROM blogs b %s ORDER BY b.is_top DESC, b.created_at DESC LIMIT $%d OFFSET $%d`,
-		whereClause, argIdx, argIdx+1)
+		 FROM blogs b %s ORDER BY %s LIMIT $%d OFFSET $%d`,
+		whereClause, orderClause, argIdx, argIdx+1)
 	args = append(args, opts.PageSize, offset)
 	rows, err := r.db.Query(ctx, query, args...)
 	if err != nil {
