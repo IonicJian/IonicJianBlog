@@ -20,6 +20,7 @@ import (
 	"github.com/zanelin/blog/internal/dto/request"
 	dto "github.com/zanelin/blog/internal/dto/response"
 	"github.com/zanelin/blog/internal/middleware"
+	"github.com/zanelin/blog/internal/pkg/oauthstore"
 	resp "github.com/zanelin/blog/internal/pkg/response"
 	authSvc "github.com/zanelin/blog/internal/service/auth"
 )
@@ -85,9 +86,49 @@ func (h *Handler) GitHubCallback(c *gin.Context) {
 		c.Redirect(http.StatusTemporaryRedirect, fmt.Sprintf("%s/login?error=github_auth_failed", h.cfg.Server.FrontendURL))
 		return
 	}
-	redirectURL := fmt.Sprintf("%s/auth/callback?access_token=%s&refresh_token=%s&user_id=%d&role=%s",
-		h.cfg.Server.FrontendURL, tokens.AccessToken, tokens.RefreshToken, user.ID, user.Role)
+	// Store tokens under a single-use code instead of passing them in the URL.
+	// This prevents tokens from leaking into browser history, server logs, and Referer headers.
+	exchangeCode, err := oauthstore.Put(oauthstore.Entry{
+		AccessToken:  tokens.AccessToken,
+		RefreshToken: tokens.RefreshToken,
+		ExpiresIn:    tokens.ExpiresIn,
+		UserID:       user.ID,
+		Role:         user.Role,
+	})
+	if err != nil {
+		c.Redirect(http.StatusTemporaryRedirect, fmt.Sprintf("%s/login?error=server_error", h.cfg.Server.FrontendURL))
+		return
+	}
+	redirectURL := fmt.Sprintf("%s/auth/callback?code=%s", h.cfg.Server.FrontendURL, exchangeCode)
 	c.Redirect(http.StatusTemporaryRedirect, redirectURL)
+}
+
+// ExchangeCode exchanges a single-use OAuth code for tokens.
+// The code is consumed on first use and expires after 5 minutes.
+func (h *Handler) ExchangeCode(c *gin.Context) {
+	var req struct {
+		Code string `json:"code" binding:"required"`
+	}
+	if err := c.ShouldBindJSON(&req); err != nil {
+		resp.BadRequest(c, "missing code")
+		return
+	}
+	entry, ok := oauthstore.Take(req.Code)
+	if !ok {
+		resp.Error(c, http.StatusGone, 410, "code expired or already used")
+		return
+	}
+	user, err := h.authService.GetUserByID(c.Request.Context(), entry.UserID)
+	if err != nil {
+		resp.NotFound(c, "user not found")
+		return
+	}
+	resp.Success(c, dto.AuthResponse{
+		User:         mapper.UserToResponse(user),
+		AccessToken:  entry.AccessToken,
+		RefreshToken: entry.RefreshToken,
+		ExpiresIn:    entry.ExpiresIn,
+	})
 }
 
 func (h *Handler) GetProfile(c *gin.Context) {

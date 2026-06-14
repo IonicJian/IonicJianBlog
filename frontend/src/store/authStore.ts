@@ -22,8 +22,8 @@ interface AuthState {
 
 export const useAuthStore = create<AuthState>((set, get) => ({
   user: null,
-  accessToken: localStorage.getItem('access_token'),
-  refreshToken: localStorage.getItem('refresh_token'),
+  accessToken: sessionStorage.getItem('access_token'),
+  refreshToken: sessionStorage.getItem('refresh_token'),
   isAuthenticated: false,
   isLoading: true,
 
@@ -47,8 +47,8 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   },
 
   setAuthFromResponse: (data) => {
-    localStorage.setItem('access_token', data.access_token);
-    localStorage.setItem('refresh_token', data.refresh_token);
+    sessionStorage.setItem('access_token', data.access_token);
+    sessionStorage.setItem('refresh_token', data.refresh_token);
     set({
       user: data.user,
       accessToken: data.access_token,
@@ -59,8 +59,8 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   },
 
   logout: () => {
-    localStorage.removeItem('access_token');
-    localStorage.removeItem('refresh_token');
+    sessionStorage.removeItem('access_token');
+    sessionStorage.removeItem('refresh_token');
     set({
       user: null,
       accessToken: null,
@@ -74,8 +74,8 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     if (!rt) throw new Error('No refresh token');
     const res = await authApi.refresh(rt);
     const { access_token, refresh_token } = res.data.data;
-    localStorage.setItem('access_token', access_token);
-    localStorage.setItem('refresh_token', refresh_token);
+    sessionStorage.setItem('access_token', access_token);
+    sessionStorage.setItem('refresh_token', refresh_token);
     set({ accessToken: access_token, refreshToken: refresh_token });
   },
 
@@ -92,8 +92,8 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   setUser: (user) => set({ user }),
 
   handleOAuthCallback: (accessToken: string, refreshToken: string) => {
-    localStorage.setItem('access_token', accessToken);
-    localStorage.setItem('refresh_token', refreshToken);
+    sessionStorage.setItem('access_token', accessToken);
+    sessionStorage.setItem('refresh_token', refreshToken);
     set({ accessToken, refreshToken, isAuthenticated: true, isLoading: false });
     authApi.getProfile().then((res) => {
       set({ user: res.data.data });

@@ -52,6 +52,7 @@ func Setup(r *gin.Engine, h *Handlers, cfg *config.Config) {
 		authGroup.POST("/refresh", h.Auth.RefreshToken)
 		authGroup.GET("/github", h.Auth.GitHubLogin)
 		authGroup.GET("/github/callback", h.Auth.GitHubCallback)
+			authGroup.POST("/exchange-code", h.Auth.ExchangeCode)
 	}
 
 	// Auth-protected routes (any logged-in user)

@@ -31,6 +31,7 @@ see @docs/plugins.md for plugin management
 
 - 编写 .md 文档时，也要用中文
 - 正式文档写到项目的 docs/ 目录下
+- coding规则写在 rules/ 目录下
 - 用于讨论和评审的计划、方案等文档，写到项目的 discuss/ 目录下
 
 ## Code Architecture
@@ -102,4 +103,5 @@ see @docs/plugins.md for plugin management
 - 提交前确保：`go build ./...` / `go vet ./...` / `npx tsc --noEmit` / `npx vite build` 全部通过
 
 ## 远程提交
+
 注意替换含敏感信息的文件（如API-key,用户信息等）
