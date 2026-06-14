@@ -28,6 +28,9 @@ Thumbs.db
 # Docker
 postgres_data/
 
+# Backups
+backups/
+
 # Go
 
 # CodeGraph

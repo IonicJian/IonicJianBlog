@@ -1,0 +1,141 @@
+name: CI/CD
+
+on:
+  push:
+    branches: [main, refactor/backend-code-architecture]
+  pull_request:
+    branches: [main]
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_BACKEND: ${{ github.repository }}/backend
+  IMAGE_FRONTEND: ${{ github.repository }}/frontend
+  GO_VERSION: "1.26"
+  NODE_VERSION: "24"
+
+jobs:
+  backend-lint:
+    name: Backend — lint & build
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ./backend
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version: ${{ env.GO_VERSION }}
+          cache-dependency-path: backend/go.sum
+
+      - name: go vet
+        run: go vet ./...
+
+      - name: go build
+        run: go build ./...
+
+      # TODO: 添加测试后取消注释
+      # - name: go test
+      #   run: go test ./...
+
+  frontend-lint:
+    name: Frontend — lint & build
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ./frontend
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: npm ci
+        run: npm ci
+
+      - name: TypeScript check
+        run: npx tsc --noEmit
+
+      - name: ESLint
+        run: npm run lint
+
+      - name: Vite build
+        run: npm run build
+
+  docker:
+    name: Docker — build & push
+    needs: [backend-lint, frontend-lint]
+    if: github.event_name == 'push'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Extract metadata for backend
+        id: meta-backend
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.REGISTRY }}/${{ env.IMAGE_BACKEND }}
+          tags: |
+            type=sha,prefix=,format=short
+            type=ref,event=branch
+
+      - name: Extract metadata for frontend
+        id: meta-frontend
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.REGISTRY }}/${{ env.IMAGE_FRONTEND }}
+          tags: |
+            type=sha,prefix=,format=short
+            type=ref,event=branch
+
+      - name: Build & push backend
+        uses: docker/build-push-action@v6
+        with:
+          context: ./backend
+          file: ./backend/Dockerfile
+          target: prod
+          push: true
+          tags: ${{ steps.meta-backend.outputs.tags }}
+          labels: ${{ steps.meta-backend.outputs.labels }}
+
+      - name: Build & push frontend
+        uses: docker/build-push-action@v6
+        with:
+          context: ./frontend
+          file: ./frontend/Dockerfile
+          target: prod
+          push: true
+          tags: ${{ steps.meta-frontend.outputs.tags }}
+          labels: ${{ steps.meta-frontend.outputs.labels }}
+
+  # --- 部署 (VPS 就绪后取消注释) ---
+  # deploy:
+  #   name: Deploy to VPS
+  #   needs: [docker]
+  #   if: github.ref == 'refs/heads/main'
+  #   runs-on: ubuntu-latest
+  #   steps:
+  #     - name: Deploy via SSH
+  #       uses: appleboy/ssh-action@v1
+  #       with:
+  #         host: ${{ secrets.DEPLOY_HOST }}
+  #         username: ${{ secrets.DEPLOY_USER }}
+  #         key: ${{ secrets.DEPLOY_SSH_KEY }}
+  #         script: |
+  #           cd /opt/blog
+  #           docker compose -f docker-compose.prod.yml pull
+  #           docker compose -f docker-compose.prod.yml up -d
+  #           docker image prune -f
