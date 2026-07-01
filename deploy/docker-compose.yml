@@ -1,0 +1,55 @@
+# 复制到项目根目录作为部署编排
+# 与 docker-compose.prod.yml 不同，此文件使用 deploy/ 下的极简 Dockerfile
+# 不在 VPS 上编译，仅 COPY 预构建的二进制和静态文件
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: blog-postgres
+    environment:
+      POSTGRES_DB: blog
+      POSTGRES_USER: blog_user
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U blog_user -d blog"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: blog-backend
+    environment:
+      SERVER_PORT: ":8080"
+      SERVER_MODE: "release"
+      SERVER_FRONTEND_URL: ${SERVER_FRONTEND_URL:-http://localhost}
+      DATABASE_DSN: "postgres://blog_user:${POSTGRES_PASSWORD}@postgres:5432/blog?sslmode=disable"
+      JWT_SECRET: ${JWT_SECRET}
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD:-}
+      ADMIN_EMAIL: ${ADMIN_EMAIL:-admin@blog.local}
+    depends_on:
+      postgres:
+        condition: service_healthy
+    volumes:
+      - uploads_data:/app/uploads
+    restart: unless-stopped
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: blog-frontend
+    ports:
+      - "80:80"
+    depends_on:
+      - backend
+    restart: unless-stopped
+
+volumes:
+  postgres_data:
+  uploads_data:

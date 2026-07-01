@@ -2,14 +2,11 @@ name: CI/CD
 
 on:
   push:
-    branches: [main, refactor/backend-code-architecture]
+    branches: [main]
   pull_request:
     branches: [main]
 
 env:
-  REGISTRY: ghcr.io
-  IMAGE_BACKEND: ${{ github.repository }}/backend
-  IMAGE_FRONTEND: ${{ github.repository }}/frontend
   GO_VERSION: "1.26"
   NODE_VERSION: "24"
 
@@ -22,21 +19,12 @@ jobs:
         working-directory: ./backend
     steps:
       - uses: actions/checkout@v4
-
       - uses: actions/setup-go@v5
         with:
           go-version: ${{ env.GO_VERSION }}
           cache-dependency-path: backend/go.sum
-
-      - name: go vet
-        run: go vet ./...
-
-      - name: go build
-        run: go build ./...
-
-      # TODO: 添加测试后取消注释
-      # - name: go test
-      #   run: go test ./...
+      - run: go vet ./...
+      - run: go build ./...
 
   frontend-lint:
     name: Frontend — lint & build
@@ -46,96 +34,72 @@ jobs:
         working-directory: ./frontend
     steps:
       - uses: actions/checkout@v4
-
       - uses: actions/setup-node@v4
         with:
           node-version: ${{ env.NODE_VERSION }}
           cache: npm
           cache-dependency-path: frontend/package-lock.json
+      - run: npm ci
+      - run: npx tsc --noEmit
+      - run: npm run lint
+      - run: npm run build
 
-      - name: npm ci
-        run: npm ci
-
-      - name: TypeScript check
-        run: npx tsc --noEmit
-
-      - name: ESLint
-        run: npm run lint
-
-      - name: Vite build
-        run: npm run build
-
-  docker:
-    name: Docker — build & push
+  deploy:
+    name: Deploy to VPS
     needs: [backend-lint, frontend-lint]
-    if: github.event_name == 'push'
+    if: github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
-    permissions:
-      contents: read
-      packages: write
     steps:
       - uses: actions/checkout@v4
 
-      - name: Log in to GitHub Container Registry
-        uses: docker/login-action@v3
+      - uses: actions/setup-go@v5
         with:
-          registry: ${{ env.REGISTRY }}
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
+          go-version: ${{ env.GO_VERSION }}
 
-      - name: Extract metadata for backend
-        id: meta-backend
-        uses: docker/metadata-action@v5
+      - uses: actions/setup-node@v4
         with:
-          images: ${{ env.REGISTRY }}/${{ env.IMAGE_BACKEND }}
-          tags: |
-            type=sha,prefix=,format=short
-            type=ref,event=branch
+          node-version: ${{ env.NODE_VERSION }}
 
-      - name: Extract metadata for frontend
-        id: meta-frontend
-        uses: docker/metadata-action@v5
+      - name: Build Go binary (linux/amd64)
+        run: |
+          cd backend
+          CGO_ENABLED=0 GOOS=linux go build -ldflags="-s -w" -o ../deploy/backend/blog-server ./cmd/server
+
+      - name: Build frontend
+        run: |
+          cd frontend
+          npm ci
+          npm run build
+
+      - name: Assemble deploy package
+        run: |
+          cp -r frontend/dist deploy/frontend/
+          cp frontend/nginx.conf deploy/frontend/
+          # tar for faster scp
+          tar -czf /tmp/deploy.tar.gz deploy/
+
+      - name: Copy to VPS
+        uses: appleboy/scp-action@v0.1.7
         with:
-          images: ${{ env.REGISTRY }}/${{ env.IMAGE_FRONTEND }}
-          tags: |
-            type=sha,prefix=,format=short
-            type=ref,event=branch
+          host: ${{ secrets.DEPLOY_HOST }}
+          username: ${{ secrets.DEPLOY_USER }}
+          key: ${{ secrets.DEPLOY_SSH_KEY }}
+          source: /tmp/deploy.tar.gz
+          target: /tmp/
 
-      - name: Build & push backend
-        uses: docker/build-push-action@v6
+      - name: Rebuild and restart
+        uses: appleboy/ssh-action@v1
         with:
-          context: ./backend
-          file: ./backend/Dockerfile
-          target: prod
-          push: true
-          tags: ${{ steps.meta-backend.outputs.tags }}
-          labels: ${{ steps.meta-backend.outputs.labels }}
-
-      - name: Build & push frontend
-        uses: docker/build-push-action@v6
-        with:
-          context: ./frontend
-          file: ./frontend/Dockerfile
-          target: prod
-          push: true
-          tags: ${{ steps.meta-frontend.outputs.tags }}
-          labels: ${{ steps.meta-frontend.outputs.labels }}
-
-  # --- 部署 (VPS 就绪后取消注释) ---
-  # deploy:
-  #   name: Deploy to VPS
-  #   needs: [docker]
-  #   if: github.ref == 'refs/heads/main'
-  #   runs-on: ubuntu-latest
-  #   steps:
-  #     - name: Deploy via SSH
-  #       uses: appleboy/ssh-action@v1
-  #       with:
-  #         host: ${{ secrets.DEPLOY_HOST }}
-  #         username: ${{ secrets.DEPLOY_USER }}
-  #         key: ${{ secrets.DEPLOY_SSH_KEY }}
-  #         script: |
-  #           cd /opt/blog
-  #           docker compose -f docker-compose.prod.yml pull
-  #           docker compose -f docker-compose.prod.yml up -d
-  #           docker image prune -f
+          host: ${{ secrets.DEPLOY_HOST }}
+          username: ${{ secrets.DEPLOY_USER }}
+          key: ${{ secrets.DEPLOY_SSH_KEY }}
+          script: |
+            set -e
+            cd /opt/deploy
+            tar -xzf /tmp/deploy.tar.gz --strip-components=1 -C .
+            docker compose down 2>/dev/null || true
+            docker compose build --no-cache
+            docker compose up -d
+            docker image prune -f
+            sleep 3
+            curl -sf http://localhost/api/v1/health && echo "Deploy OK"
