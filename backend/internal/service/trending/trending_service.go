@@ -61,10 +61,29 @@ func (s *trendingService) Refresh() {
 }
 
 func (s *trendingService) fetchTrending() ([]TrendingRepo, error) {
-	url := "https://api.github.com/search/repositories?q=created:>" +
+	query := "created:>" +
 		time.Now().AddDate(0, 0, -7).Format("2006-01-02") +
 		"&sort=stars&order=desc&per_page=20"
 
+	// Try GitHub API first, then mirrors (GFW workaround)
+	urls := []string{
+		"https://api.github.com/search/repositories?q=" + query,
+		"https://api.gitmirror.com/search/repositories?q=" + query,
+		"https://github-api.deno.dev/search/repositories?q=" + query,
+	}
+
+	var lastErr error
+	for _, url := range urls {
+		repos, err := s.tryFetch(url)
+		if err == nil {
+			return repos, nil
+		}
+		lastErr = err
+	}
+	return nil, lastErr
+}
+
+func (s *trendingService) tryFetch(url string) ([]TrendingRepo, error) {
 	req, _ := http.NewRequest("GET", url, nil)
 	req.Header.Set("Accept", "application/vnd.github.v3+json")
 	req.Header.Set("User-Agent", "blog-trending")
