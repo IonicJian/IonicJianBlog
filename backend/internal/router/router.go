@@ -8,13 +8,11 @@ import (
 	"github.com/zanelin/blog/internal/handler/content"
 	"github.com/zanelin/blog/internal/handler/social"
 	"github.com/zanelin/blog/internal/handler/trending"
-	"github.com/zanelin/blog/internal/handler/user"
 	"github.com/zanelin/blog/internal/middleware"
 )
 
 type Handlers struct {
 	Auth       *auth.Handler
-	User       *user.Handler
 	Blog       *blog.Handler
 	Comment    *social.CommentHandler
 	Like       *social.LikeHandler
@@ -62,7 +60,6 @@ func Setup(r *gin.Engine, h *Handlers, cfg *config.Config) {
 		authRequired.POST("/auth/logout", h.Auth.Logout)
 		authRequired.GET("/users/me", h.Auth.GetProfile)
 		authRequired.PUT("/users/me", h.Auth.UpdateProfile)
-		authRequired.PUT("/users/me/avatar", h.Auth.UpdateProfile)
 		authRequired.POST("/users/me/avatar/upload", h.Auth.UploadAvatar)
 		authRequired.POST("/upload/image", blog.UploadImage)
 
@@ -117,6 +114,5 @@ func Setup(r *gin.Engine, h *Handlers, cfg *config.Config) {
 		optionalAuth.GET("/blogs/:id/summary", h.Trending.GetSummary)
 		optionalAuth.GET("/trending/github", h.Trending.GetGithubTrending)
 		optionalAuth.GET("/categories", h.Category.List)
-		optionalAuth.GET("/users/:id", h.User.GetUser)
 	}
 }

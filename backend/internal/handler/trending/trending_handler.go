@@ -20,9 +20,9 @@ func (h *Handler) GetGithubTrending(c *gin.Context) {
 }
 
 func (h *Handler) GenerateSummary(c *gin.Context) {
-	c.JSON(http.StatusNotImplemented, gin.H{"code": 501, "message": "not implemented"})
+	resp.Error(c, http.StatusNotImplemented, 501, "AI summary not yet implemented")
 }
 
 func (h *Handler) GetSummary(c *gin.Context) {
-	c.JSON(http.StatusNotImplemented, gin.H{"code": 501, "message": "not implemented"})
+	resp.Error(c, http.StatusNotImplemented, 501, "AI summary not yet implemented")
 }

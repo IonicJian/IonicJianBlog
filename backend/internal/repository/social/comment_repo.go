@@ -2,6 +2,8 @@ package social
 
 import (
 	"context"
+	"fmt"
+	"strings"
 
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/zanelin/blog/internal/model"
@@ -50,11 +52,37 @@ func (r *commentRepo) Delete(ctx context.Context, id int64) error {
 	return err
 }
 
+// scanComment is a helper to scan a comment row with author and like_count.
+func (r *commentRepo) scanComment(scanner interface {
+	Scan(dest ...any) error
+}) (*model.Comment, error) {
+	c := &model.Comment{}
+	author := &model.User{}
+	err := scanner.Scan(
+		&c.ID, &c.BlogID, &c.UserID, &c.ParentID, &c.Content,
+		&c.AnchorStart, &c.AnchorEnd, &c.AnchorText, &c.IsApproved, &c.CreatedAt, &c.UpdatedAt,
+		&author.ID, &author.Username, &author.DisplayName, &author.AvatarURL,
+		&c.LikeCount,
+	)
+	if err != nil {
+		return nil, err
+	}
+	c.Author = author
+	return c, nil
+}
+
+const commentSelectCols = `c.id, c.blog_id, c.user_id, c.parent_id, c.content,
+	c.anchor_start, c.anchor_end, c.anchor_text, c.is_approved, c.created_at, c.updated_at,
+	u.id, u.username, u.display_name, u.avatar_url,
+	COALESCE((SELECT COUNT(*) FROM likes WHERE target_type='comment' AND target_id=c.id), 0) AS like_count`
+
+const commentFromJoin = `FROM comments c JOIN users u ON u.id = c.user_id`
+
 func (r *commentRepo) ListByBlogID(ctx context.Context, blogID int64, page, pageSize int) ([]*model.Comment, int64, error) {
-	// Count all comments (including replies)
+	// Count only top-level comments for pagination
 	var total int64
 	err := r.db.QueryRow(ctx,
-		"SELECT COUNT(*) FROM comments WHERE blog_id=$1", blogID,
+		"SELECT COUNT(*) FROM comments WHERE blog_id=$1 AND parent_id IS NULL", blogID,
 	).Scan(&total)
 	if err != nil {
 		return nil, 0, err
@@ -62,60 +90,64 @@ func (r *commentRepo) ListByBlogID(ctx context.Context, blogID int64, page, page
 
 	offset := (page - 1) * pageSize
 
-	// Get all comments for this blog (top-level + replies) in one query
+	// Step 1: Query paginated top-level comments
 	rows, err := r.db.Query(ctx,
-		`SELECT c.id, c.blog_id, c.user_id, c.parent_id, c.content,
-		        c.anchor_start, c.anchor_end, c.anchor_text, c.is_approved, c.created_at, c.updated_at,
-		        u.id, u.username, u.display_name, u.avatar_url,
-		        COALESCE((SELECT COUNT(*) FROM likes WHERE target_type='comment' AND target_id=c.id), 0) AS like_count
-		 FROM comments c
-		 JOIN users u ON u.id = c.user_id
-		 WHERE c.blog_id = $1
-		 ORDER BY c.created_at ASC`, blogID)
+		fmt.Sprintf(`SELECT %s %s WHERE c.blog_id=$1 AND c.parent_id IS NULL ORDER BY c.created_at ASC LIMIT $2 OFFSET $3`, commentSelectCols, commentFromJoin),
+		blogID, pageSize, offset)
 	if err != nil {
 		return nil, 0, err
 	}
-	defer rows.Close()
 
-	var all []*model.Comment
-	commentMap := make(map[int64]*model.Comment)
-
+	var topLevel []*model.Comment
+	topIDs := make([]int64, 0, pageSize)
 	for rows.Next() {
-		c := &model.Comment{}
-		author := &model.User{}
-		err := rows.Scan(
-			&c.ID, &c.BlogID, &c.UserID, &c.ParentID, &c.Content,
-			&c.AnchorStart, &c.AnchorEnd, &c.AnchorText, &c.IsApproved, &c.CreatedAt, &c.UpdatedAt,
-			&author.ID, &author.Username, &author.DisplayName, &author.AvatarURL,
-			&c.LikeCount,
-		)
+		c, err := r.scanComment(rows)
+		if err != nil {
+			rows.Close()
+			return nil, 0, err
+		}
+		topLevel = append(topLevel, c)
+		topIDs = append(topIDs, c.ID)
+	}
+	rows.Close()
+
+	if len(topLevel) == 0 {
+		return topLevel, total, nil
+	}
+
+	// Step 2: Fetch all replies for these top-level comments in one query
+	placeholders := make([]string, len(topIDs))
+	args := make([]any, len(topIDs)+1)
+	args[0] = blogID
+	for i, id := range topIDs {
+		placeholders[i] = fmt.Sprintf("$%d", i+2)
+		args[i+1] = id
+	}
+
+	replyRows, err := r.db.Query(ctx,
+		fmt.Sprintf(`SELECT %s %s WHERE c.blog_id=$1 AND c.parent_id IN (%s) ORDER BY c.created_at ASC`,
+			commentSelectCols, commentFromJoin, strings.Join(placeholders, ",")),
+		args...)
+	if err != nil {
+		return nil, 0, err
+	}
+	defer replyRows.Close()
+
+	// Build parent map for attaching replies
+	parentMap := make(map[int64]*model.Comment)
+	for _, c := range topLevel {
+		parentMap[c.ID] = c
+	}
+
+	for replyRows.Next() {
+		c, err := r.scanComment(replyRows)
 		if err != nil {
 			return nil, 0, err
 		}
-		c.Author = author
-		all = append(all, c)
-		commentMap[c.ID] = c
-	}
-
-	// Build tree: top-level paginated, replies attached
-	var topLevel []*model.Comment
-	for _, c := range all {
-		if c.ParentID == nil {
-			topLevel = append(topLevel, c)
-		} else if parent, ok := commentMap[*c.ParentID]; ok {
+		if parent, ok := parentMap[*c.ParentID]; ok {
 			parent.Replies = append(parent.Replies, c)
 		}
 	}
 
-	// Apply pagination to top-level
-	start := offset
-	end := offset + pageSize
-	if start > len(topLevel) {
-		start = len(topLevel)
-	}
-	if end > len(topLevel) {
-		end = len(topLevel)
-	}
-
-	return topLevel[start:end], total, nil
+	return topLevel, total, nil
 }

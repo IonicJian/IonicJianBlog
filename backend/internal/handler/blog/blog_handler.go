@@ -4,6 +4,7 @@ import (
 	"strconv"
 
 	"github.com/gin-gonic/gin"
+	"github.com/rs/zerolog/log"
 	"github.com/zanelin/blog/internal/dto/mapper"
 	"github.com/zanelin/blog/internal/dto/request"
 	dto "github.com/zanelin/blog/internal/dto/response"
@@ -104,7 +105,9 @@ func (h *Handler) Update(c *gin.Context) {
 func (h *Handler) IncrementView(c *gin.Context) {
 	id, err := strconv.ParseInt(c.Param("id"), 10, 64)
 	if err != nil { resp.BadRequest(c, "invalid id"); return }
-	_ = h.blogService.IncrementView(c.Request.Context(), id)
+	if err := h.blogService.IncrementView(c.Request.Context(), id); err != nil {
+			log.Error().Err(err).Int64("blog_id", id).Msg("increment view failed")
+		}
 	resp.Success(c, nil)
 }
 

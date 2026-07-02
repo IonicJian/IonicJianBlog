@@ -108,9 +108,9 @@ func (r *userRepo) GetByGithubID(ctx context.Context, githubID int64) (*model.Us
 func (r *userRepo) Update(ctx context.Context, user *model.User) error {
 	user.UpdatedAt = time.Now()
 	_, err := r.db.Exec(ctx,
-		`UPDATE users SET display_name=$1, avatar_url=$2, bio=$3, updated_at=$4
-		 WHERE id=$5`,
-		user.DisplayName, user.AvatarURL, user.Bio, user.UpdatedAt, user.ID,
+		`UPDATE users SET display_name=$1, avatar_url=$2, bio=$3, github_id=$4, updated_at=$5
+		 WHERE id=$6`,
+		user.DisplayName, user.AvatarURL, user.Bio, user.GithubID, user.UpdatedAt, user.ID,
 	)
 	return err
 }

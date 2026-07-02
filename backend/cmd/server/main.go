@@ -21,7 +21,6 @@ import (
 	contentH "github.com/zanelin/blog/internal/handler/content"
 	socialH "github.com/zanelin/blog/internal/handler/social"
 	trendingH "github.com/zanelin/blog/internal/handler/trending"
-	userH "github.com/zanelin/blog/internal/handler/user"
 	blogR "github.com/zanelin/blog/internal/repository/blog"
 	contentR "github.com/zanelin/blog/internal/repository/content"
 	socialR "github.com/zanelin/blog/internal/repository/social"
@@ -113,7 +112,6 @@ func main() {
 	// Handlers
 	h := &router.Handlers{
 		Auth:       authH.New(authService, cfg),
-		User:       userH.New(),
 		Blog:       blogH.New(blogService),
 		Comment:    socialH.NewCommentHandler(commentService),
 		Like:       socialH.NewLikeHandler(likeService),

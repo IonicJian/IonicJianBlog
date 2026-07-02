@@ -60,8 +60,67 @@ func (r *blogRepo) Create(ctx context.Context, blog *model.Blog, tagIDs []int64)
 	return tx.Commit(ctx)
 }
 
+// getManyByIDs fetches multiple blogs by their IDs in a single query.
+func (r *blogRepo) getManyByIDs(ctx context.Context, ids []int64, currentUserID *int64) ([]*model.Blog, error) {
+	if len(ids) == 0 {
+		return nil, nil
+	}
+
+	placeholders := make([]string, len(ids))
+	args := make([]any, len(ids))
+	for i, id := range ids {
+		placeholders[i] = fmt.Sprintf("$%d", i+1)
+		args[i] = id
+	}
+
+	baseQuery := `SELECT b.id, b.user_id, b.title, b.slug, b.content, b.content_html, b.excerpt, b.cover_image,
+		b.status, b.view_count, b.is_top, b.category_id, b.created_at, b.updated_at,
+		COALESCE((SELECT COUNT(*) FROM likes WHERE target_type='blog' AND target_id=b.id),0) AS like_count`
+
+	if currentUserID != nil {
+		baseQuery += fmt.Sprintf(`, EXISTS(SELECT 1 FROM likes WHERE target_type='blog' AND target_id=b.id AND user_id=$%d) AS liked_by_me`, len(ids)+1)
+		args = append(args, *currentUserID)
+	}
+
+	query := fmt.Sprintf(`%s FROM blogs b WHERE b.id IN (%s)`, baseQuery, strings.Join(placeholders, ","))
+	rows, err := r.db.Query(ctx, query, args...)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	// Preserve input order
+	byID := make(map[int64]*model.Blog, len(ids))
+	for rows.Next() {
+		b := &model.Blog{}
+		var likedByMe bool
+		var catID *int64
+		scanArgs := []any{
+			&b.ID, &b.UserID, &b.Title, &b.Slug, &b.Content, &b.ContentHTML, &b.Excerpt, &b.CoverImage,
+			&b.Status, &b.ViewCount, &b.IsTop, &catID, &b.CreatedAt, &b.UpdatedAt, &b.LikeCount,
+		}
+		if currentUserID != nil {
+			scanArgs = append(scanArgs, &likedByMe)
+		}
+		if err := rows.Scan(scanArgs...); err != nil {
+			return nil, err
+		}
+		b.CategoryID = catID
+		b.LikedByMe = likedByMe
+		byID[b.ID] = b
+	}
+
+	blogs := make([]*model.Blog, 0, len(ids))
+	for _, id := range ids {
+		if b, ok := byID[id]; ok {
+			blogs = append(blogs, b)
+		}
+	}
+	return blogs, nil
+}
+
 // getOne is a helper to fetch a single blog with like_count and optional liked_by_me.
-func (r *blogRepo) getOne(ctx context.Context, whereClause string, whereArg interface{}, currentUserID *int64) (*model.Blog, error) {
+func (r *blogRepo) getOne(ctx context.Context, whereClause string, whereArg any, currentUserID *int64) (*model.Blog, error) {
 	b := &model.Blog{}
 	var likedByMe bool
 
@@ -133,7 +192,7 @@ func (r *blogRepo) Delete(ctx context.Context, id int64) error {
 
 func (r *blogRepo) List(ctx context.Context, opts ListOptions) ([]*model.Blog, int64, error) {
 	var where []string
-	args := []interface{}{}
+	args := []any{}
 	argIdx := 1
 	if opts.Status != "" {
 		where = append(where, fmt.Sprintf("b.status=$%d", argIdx))
@@ -265,23 +324,19 @@ func (r *blogRepo) Search(ctx context.Context, query string, page, pageSize int,
 	}
 
 	// Paginate IDs
-	end := offset + pageSize
-	if end > len(ids) {
-		end = len(ids)
-	}
+	end := min(offset+pageSize, len(ids))
 	if offset >= len(ids) {
 		return nil, total, nil
 	}
 	pageIDs := ids[offset:end]
 
-	// Fetch full blog data for this page (now with currentUserID)
-	var blogs []*model.Blog
-	for _, id := range pageIDs {
-		b, err := r.GetByID(ctx, id, currentUserID)
-		if err == nil {
-			b.Excerpt = highlightExcerpt(b.Excerpt, q)
-			blogs = append(blogs, b)
-		}
+	// Fetch full blog data for this page in a single query
+	blogs, err := r.getManyByIDs(ctx, pageIDs, currentUserID)
+	if err != nil {
+		return nil, total, err
+	}
+	for _, b := range blogs {
+		b.Excerpt = highlightExcerpt(b.Excerpt, q)
 	}
 	return blogs, total, nil
 }
@@ -317,14 +372,8 @@ func highlightExcerpt(text, query string) string {
 	tl := strings.ToLower(text)
 	idx := strings.Index(tl, ql)
 	if idx >= 0 {
-		start := idx - 20
-		if start < 0 {
-			start = 0
-		}
-		end := idx + len(query) + 30
-		if end > len(text) {
-			end = len(text)
-		}
+		start := max(idx-20, 0)
+		end := min(idx+len(query)+30, len(text))
 		snippet := text[start:end]
 		if start > 0 {
 			snippet = "..." + snippet

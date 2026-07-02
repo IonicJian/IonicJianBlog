@@ -1,6 +1,8 @@
 package middleware
 
 import (
+	"crypto/rand"
+	"encoding/hex"
 	"net/url"
 	"strings"
 	"time"
@@ -90,11 +92,9 @@ func generateRequestID() string {
 }
 
 func randomString(n int) string {
-	const letters = "abcdefghijklmnopqrstuvwxyz0123456789"
 	b := make([]byte, n)
-	for i := range b {
-		b[i] = letters[time.Now().UnixNano()%int64(len(letters))]
-		time.Sleep(1) // ensure different values in same nanosecond
+	if _, err := rand.Read(b); err != nil {
+		return time.Now().Format("150405")
 	}
-	return string(b)
+	return hex.EncodeToString(b)[:n]
 }
