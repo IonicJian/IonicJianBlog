@@ -39,6 +39,8 @@
 }
 
 :root {
+  --dot-a: rgba(3,7,18,0.35);
+  --dot-b: rgba(3,7,18,0.45);
   --background: #ffffff;
   --foreground: #030712;
   --card: #ffffff;
@@ -62,6 +64,8 @@
 }
 
 .dark {
+  --dot-a: rgba(255,255,255,0.35);
+  --dot-b: rgba(255,255,255,0.45);
   --background: #030712;
   --foreground: #ffffff;
   --card: #030712;
@@ -97,6 +101,11 @@
 
   body {
     background-color: var(--background);
+    background-image:
+      radial-gradient(circle, var(--dot-a) 0.3px, transparent 0.6px),
+      radial-gradient(circle, var(--dot-b) 0.3px, transparent 0.6px);
+    background-size: 121.24px 70px;
+    background-position: 0 0, 60.62px 35px;
     color: var(--foreground);
     font-family: var(--font-sans);
     -webkit-font-smoothing: antialiased;
@@ -135,6 +144,34 @@
   }
   .bp-line::after {
     bottom: 0;
+  }
+
+  .bp-line-top {
+    position: relative;
+  }
+  .bp-line-top::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100vw;
+    width: 200vw;
+    height: 1px;
+    background: var(--border);
+    pointer-events: none;
+  }
+
+  .bp-line-bottom {
+    position: relative;
+  }
+  .bp-line-bottom::after {
+    content: '';
+    position: absolute;
+    bottom: 0;
+    left: -100vw;
+    width: 200vw;
+    height: 1px;
+    background: var(--border);
+    pointer-events: none;
   }
 }
 

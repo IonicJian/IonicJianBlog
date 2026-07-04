@@ -1,4 +1,5 @@
-import { Camera } from "@phosphor-icons/react";
+import { Camera as CameraIcon } from "@phosphor-icons/react";
+import { Camera } from "@/components/decorations/Camera";
 import { useState } from "react";
 import {
   ImageLightbox,
@@ -13,18 +14,23 @@ export function PhotographyPage() {
 
   return (
     <div className="mx-auto max-w-7xl">
-      <div className="mt-24 px-4 sm:px-6">
-        <h1 className="text-6xl tracking-tighter text-balance text-gray-950 sm:text-7xl lg:text-8xl dark:text-white">
-          Photos
-        </h1>
-        <p className="mt-10 text-lg text-gray-500 dark:text-gray-400">
-          光与影织成诗行
-        </p>
+      <div className="pointer-events-none absolute top-0 right-0 z-0 hidden w-[1080px] h-[675px] overflow-hidden lg:block">
+        <Camera />
+      </div>
+      <div className="relative mt-24 px-4 sm:px-6">
+        <div className="relative z-10">
+          <h1 className="bp-line text-6xl tracking-tighter text-balance text-gray-950 sm:text-7xl lg:text-8xl dark:text-white">
+            Photos
+          </h1>
+          <p className="mt-10 bp-line text-lg text-gray-500 dark:text-gray-400">
+            光与影织成诗行
+          </p>
+        </div>
       </div>
       <div className="mt-12 px-4 sm:px-6">
         {PHOTOS.length === 0 ? (
           <div className="bp-line rounded-2xl p-12 text-center">
-            <Camera
+            <CameraIcon
               size={32}
               weight="regular"
               className="mx-auto text-gray-400"

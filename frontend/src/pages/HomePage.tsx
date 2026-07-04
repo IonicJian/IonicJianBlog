@@ -1,51 +1,57 @@
-import { ArrowRight, Camera } from '@phosphor-icons/react'
-import { useEffect, useState } from 'react'
-import { Link } from 'react-router-dom'
-import { listBlogs } from '@/api/blogs'
-import { getSiteOwner } from '@/api/site'
-import { BlogCard } from '@/components/common/BlogCard'
-import { Button } from '@/components/ui/button'
-import type { BlogListItem } from '@/types/blog'
-import type { User } from '@/types/user'
+import { ArrowRight, Camera } from "@phosphor-icons/react";
+import { useEffect, useState } from "react";
+import { Link } from "react-router-dom";
+import { listBlogs } from "@/api/blogs";
+import { getSiteOwner } from "@/api/site";
+import { BlogCard } from "@/components/common/BlogCard";
+import { Bookcase } from "@/components/decorations/Bookcase";
+import { Button } from "@/components/ui/button";
+import type { BlogListItem } from "@/types/blog";
+import type { User } from "@/types/user";
 
 export function HomePage() {
-  const [owner, setOwner] = useState<User | null>(null)
-  const [blogs, setBlogs] = useState<BlogListItem[]>([])
+  const [owner, setOwner] = useState<User | null>(null);
+  const [blogs, setBlogs] = useState<BlogListItem[]>([]);
 
   useEffect(() => {
-    let cancelled = false
+    let cancelled = false;
     getSiteOwner()
       .then((o) => {
-        if (!cancelled) setOwner(o)
+        if (!cancelled) setOwner(o);
       })
-      .catch(() => {})
-    listBlogs({ page: 1, page_size: 6, sort: 'latest' })
+      .catch(() => {});
+    listBlogs({ page: 1, page_size: 6, sort: "latest" })
       .then((d) => {
-        if (!cancelled) setBlogs(d.items || [])
+        if (!cancelled) setBlogs(d.items || []);
       })
-      .catch(() => {})
+      .catch(() => {});
     return () => {
-      cancelled = true
-    }
-  }, [])
+      cancelled = true;
+    };
+  }, []);
 
   return (
     <>
       <section className="bp-line">
-        <div className="mx-auto max-w-7xl px-4 py-24 sm:px-6 md:py-32">
-          <h1 className="text-6xl font-medium tracking-tighter text-balance text-gray-950 sm:text-7xl lg:text-8xl dark:text-white">
-            {owner?.display_name || 'IonicJ'}
-          </h1>
-          <p className="mt-6 max-w-2xl text-base text-gray-500 dark:text-gray-400 sm:text-lg">
-            {owner?.bio || '探索技术,记录思考,分享生活。'}
-          </p>
-          <div className="mt-10">
-            <Button asChild size="lg">
-              <Link to="/blogs">
-                开始阅读
-                <ArrowRight size={16} weight="regular" />
-              </Link>
-            </Button>
+        <div className="relative mx-auto max-w-7xl px-4 py-24 sm:px-6 md:py-32">
+          <div className="pointer-events-none absolute top-0 right-0 z-0 hidden w-[960px] h-[600px] overflow-hidden lg:block ">
+            <Bookcase />
+          </div>
+          <div className="relative z-10">
+            <h1 className="bp-line text-6xl font-medium tracking-tighter text-balance text-gray-950 sm:text-7xl lg:text-8xl dark:text-white">
+              {owner?.display_name || "IonicJ"}
+            </h1>
+            <p className="mt-6 max-w-2xl bp-line text-base text-gray-500 dark:text-gray-400 sm:text-lg">
+              {owner?.bio || "探索技术,记录思考,分享生活。"}
+            </p>
+            <div className="mt-10 bp-line">
+              <Button asChild size="lg">
+                <Link to="/blogs">
+                  开始阅读
+                  <ArrowRight size={16} weight="regular" />
+                </Link>
+              </Button>
+            </div>
           </div>
         </div>
       </section>
@@ -53,7 +59,7 @@ export function HomePage() {
       <section className="bp-line">
         <div className="mx-auto max-w-7xl px-4 py-16 sm:px-6">
           <div className="flex items-center justify-between pb-8">
-            <h2 className="text-2xl font-medium tracking-tight text-gray-950 dark:text-white">
+            <h2 className="bp-line text-2xl font-medium tracking-tight text-gray-950 dark:text-white">
               最新文章
             </h2>
             <Link
@@ -80,7 +86,7 @@ export function HomePage() {
       <section>
         <div className="mx-auto max-w-7xl px-4 py-16 sm:px-6">
           <div className="flex items-center justify-between pb-8">
-            <h2 className="text-2xl font-medium tracking-tight text-gray-950 dark:text-white">
+            <h2 className="bp-line text-2xl font-medium tracking-tight text-gray-950 dark:text-white">
               摄影
             </h2>
             <Link
@@ -104,5 +110,5 @@ export function HomePage() {
         </div>
       </section>
     </>
-  )
+  );
 }

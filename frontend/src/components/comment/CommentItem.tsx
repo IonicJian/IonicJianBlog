@@ -1,4 +1,6 @@
 import { ChatCircle, Trash } from '@phosphor-icons/react'
+import ReactMarkdown from 'react-markdown'
+import remarkGfm from 'remark-gfm'
 import { deleteComment, toggleCommentLike } from '@/api/comments'
 import { LikeButton } from '@/components/like/LikeButton'
 import { cn } from '@/lib/utils'
@@ -63,7 +65,18 @@ export function CommentItem({ comment, onReply, onChanged }: CommentItemProps) {
             {comment.anchor_text}
           </blockquote>
         )}
-        <p className="mt-1 whitespace-pre-wrap text-sm">{comment.content}</p>
+        <div className="markdown-body mt-1 text-sm">
+          <ReactMarkdown
+            remarkPlugins={[remarkGfm]}
+            urlTransform={(url) =>
+              !url || /^(https?:|mailto:|tel:|#|\/|\.)/i.test(url)
+                ? url
+                : ''
+            }
+          >
+            {comment.content}
+          </ReactMarkdown>
+        </div>
         <div className="mt-2 flex items-center gap-4">
           <LikeButton
             count={comment.like_count}

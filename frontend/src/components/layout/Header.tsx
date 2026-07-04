@@ -34,7 +34,7 @@ export function Header() {
   const [mobileOpen, setMobileOpen] = useState(false)
 
   return (
-    <header className="fixed inset-x-0 top-0 z-10 h-14 border-b border-gray-950/5 bg-white/80 backdrop-blur dark:border-white/10 dark:bg-gray-950/80">
+    <header className="fixed inset-x-0 top-0 z-50 h-14 border-b border-gray-950/5 bg-white/80 backdrop-blur dark:border-white/10 dark:bg-gray-950/80">
       <div className="relative mx-auto h-14 max-w-7xl">
         <Link
           to="/"

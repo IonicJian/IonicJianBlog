@@ -27,11 +27,11 @@ export function FriendLinksPage() {
   return (
     <div className="mx-auto max-w-7xl">
       <div className="mt-24 px-4 sm:px-6">
-        <h1 className="text-6xl tracking-tighter text-balance text-gray-950 sm:text-7xl lg:text-8xl dark:text-white">
+        <h1 className="bp-line text-6xl tracking-tighter text-balance text-gray-950 sm:text-7xl lg:text-8xl dark:text-white">
           Friend Links
         </h1>
-        <p className="mt-10 text-lg text-gray-500 dark:text-gray-400">
-          朋友们的故事。
+        <p className="mt-10 bp-line text-lg text-gray-500 dark:text-gray-400">
+          欢迎留言交换友链呀
         </p>
       </div>
       <div className="mt-12">
