@@ -48,4 +48,6 @@ blogstyle/
 # Chrome DevTools snapshots
 blog-*-snap.yml
 
-.claudeignore__pycache__/
+# Python cache & Claude Code worktrees
+__pycache__/
+.claude/worktrees/

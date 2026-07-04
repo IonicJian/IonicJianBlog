@@ -43,6 +43,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     try {
       await authApi.logout()
     } catch {
+      // best-effort: clear local session regardless of network result
     }
     localStorage.removeItem(ACCESS_KEY)
     localStorage.removeItem(REFRESH_KEY)

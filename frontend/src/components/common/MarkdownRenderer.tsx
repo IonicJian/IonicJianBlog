@@ -89,6 +89,7 @@ function CodeBlock({
       setCopied(true)
       setTimeout(() => setCopied(false), 1500)
     } catch {
+      // clipboard may be unavailable (non-secure context or permission denied)
     }
   }, [code])
   return (
@@ -198,6 +199,7 @@ export function MarkdownRenderer({ content, className }: MarkdownRendererProps) 
               { USE_PROFILES: { html: true } },
             )
           } catch {
+            // shiki highlight failed: fall back to plain <code> below
           }
         }
         return <CodeBlock html={html} lang={lang} code={text} />
