@@ -1,19 +1,38 @@
-import { Outlet, useLocation } from 'react-router-dom';
-import Header from './Header';
+import { Suspense } from 'react'
+import { Outlet } from 'react-router-dom'
+import { Footer } from './Footer'
+import { Header } from './Header'
 
-export default function Layout() {
-  const isHome = useLocation().pathname === '/';
+const patternClass =
+  'col-start-1 row-span-full row-start-1 hidden bg-[image:repeating-linear-gradient(315deg,var(--pattern-fg)_0,var(--pattern-fg)_1px,transparent_0,transparent_50%)] bg-[size:10px_10px] bg-fixed border-gray-950/5 [--pattern-fg:rgb(0_0_0_/_0.05)] md:block dark:border-white/10 dark:[--pattern-fg:rgb(255_255_255_/_0.1)]'
+
+function PageFallback() {
   return (
-    <div className="min-h-screen flex flex-col bg-slate-50 dark:bg-slate-900 bg-mesh">
-      <Header />
-      <main className={`flex-1 ${isHome ? '' : 'container mx-auto px-6 py-8 max-w-5xl'} pt-14`}>
-        <Outlet />
-      </main>
-      {!isHome && (
-        <footer className="border-t border-black/5 dark:border-white/5 py-8 text-center">
-          <p className="text-xs text-slate-400 dark:text-slate-600 font-light tracking-wider">© 2026 Personal Blog</p>
-        </footer>
-      )}
+    <div className="px-4 py-24 text-sm text-gray-500 dark:text-gray-400 sm:px-6">
+      加载中...
     </div>
-  );
+  )
+}
+
+export function Layout() {
+  return (
+    <>
+      <Header />
+      <div className="grid min-h-dvh grid-cols-1 justify-center pt-14 [--gutter-width:2.5rem] md:grid-cols-[var(--gutter-width)_minmax(0,80rem)_var(--gutter-width)]">
+        <aside aria-hidden className={`${patternClass} border-r`} />
+        <main className="col-start-1 md:col-start-2">
+          <Suspense fallback={<PageFallback />}>
+            <Outlet />
+          </Suspense>
+        </main>
+        <aside
+          aria-hidden
+          className={`${patternClass} border-l md:col-start-3`}
+        />
+        <div className="col-start-1 md:col-start-2">
+          <Footer />
+        </div>
+      </div>
+    </>
+  )
 }

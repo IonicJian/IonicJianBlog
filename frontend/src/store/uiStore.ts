@@ -1,41 +1,38 @@
-import { create } from 'zustand';
+import { create } from 'zustand'
 
-type Theme = 'light' | 'dark';
+type Theme = 'light' | 'dark'
 
 interface UIState {
-  theme: Theme;
-  setTheme: (theme: Theme) => void;
-  initTheme: () => void;
-  toggleTheme: () => void;
+  theme: Theme
+  setTheme: (theme: Theme) => void
+  toggleTheme: () => void
+  initTheme: () => void
 }
 
-function getBrowserTheme(): Theme {
-  if (typeof window === 'undefined') return 'light';
-  return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
-}
+const THEME_KEY = 'theme'
 
 function applyTheme(theme: Theme) {
-  document.documentElement.classList.toggle('dark', theme === 'dark');
+  document.documentElement.classList.toggle('dark', theme === 'dark')
 }
 
 export const useUIStore = create<UIState>((set, get) => ({
-  theme: 'light',
+  theme: 'dark',
 
-  initTheme: () => {
-    const saved = localStorage.getItem('theme') as Theme | null;
-    const resolved = saved || getBrowserTheme();
-    applyTheme(resolved);
-    set({ theme: resolved });
-  },
-
-  setTheme: (theme: Theme) => {
-    localStorage.setItem('theme', theme);
-    applyTheme(theme);
-    set({ theme });
+  setTheme: (theme) => {
+    applyTheme(theme)
+    localStorage.setItem(THEME_KEY, theme)
+    set({ theme })
   },
 
   toggleTheme: () => {
-    const next = get().theme === 'dark' ? 'light' : 'dark';
-    get().setTheme(next);
+    const next = get().theme === 'dark' ? 'light' : 'dark'
+    get().setTheme(next)
   },
-}));
+
+  initTheme: () => {
+    const stored = localStorage.getItem(THEME_KEY) as Theme | null
+    const theme = stored ?? 'dark'
+    applyTheme(theme)
+    set({ theme })
+  },
+}))

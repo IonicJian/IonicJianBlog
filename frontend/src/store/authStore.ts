@@ -1,104 +1,74 @@
-import { create } from 'zustand';
-import type { User } from '../types/user';
-import { authApi } from '../api/auth';
+import { create } from 'zustand'
+import * as authApi from '@/api/auth'
+import type { User } from '@/types/user'
+
+const ACCESS_KEY = 'access_token'
+const REFRESH_KEY = 'refresh_token'
 
 interface AuthState {
-  user: User | null;
-  accessToken: string | null;
-  refreshToken: string | null;
-  isAuthenticated: boolean;
-  isLoading: boolean;
-
-  login: (email: string, password: string) => Promise<void>;
-  register: (username: string, email: string, password: string) => Promise<void>;
-  logout: () => void;
-  refreshSession: () => Promise<void>;
-  fetchProfile: () => Promise<void>;
-  handleOAuthCallback: (accessToken: string, refreshToken: string) => void;
-  setUser: (user: User) => void;
-  init: () => void;
-  setAuthFromResponse: (data: { user: User; access_token: string; refresh_token: string }) => void;
+  user: User | null
+  isAuthenticated: boolean
+  initializing: boolean
+  login: (email: string, password: string) => Promise<void>
+  register: (username: string, email: string, password: string) => Promise<void>
+  loginWithTokens: (res: { user: User; access_token: string; refresh_token: string }) => void
+  logout: () => Promise<void>
+  fetchProfile: () => Promise<void>
+  setUser: (user: User) => void
+  init: () => Promise<void>
 }
 
 export const useAuthStore = create<AuthState>((set, get) => ({
   user: null,
-  accessToken: sessionStorage.getItem('access_token'),
-  refreshToken: sessionStorage.getItem('refresh_token'),
   isAuthenticated: false,
-  isLoading: true,
-
-  init: () => {
-    const token = get().accessToken;
-    if (token) {
-      get().fetchProfile();
-    } else {
-      set({ isLoading: false });
-    }
-  },
+  initializing: true,
 
   login: async (email, password) => {
-    const res = await authApi.login(email, password);
-    get().setAuthFromResponse(res.data.data);
+    const res = await authApi.login(email, password)
+    get().loginWithTokens(res)
   },
 
   register: async (username, email, password) => {
-    const res = await authApi.register(username, email, password);
-    get().setAuthFromResponse(res.data.data);
+    const res = await authApi.register(username, email, password)
+    get().loginWithTokens(res)
   },
 
-  setAuthFromResponse: (data) => {
-    sessionStorage.setItem('access_token', data.access_token);
-    sessionStorage.setItem('refresh_token', data.refresh_token);
-    set({
-      user: data.user,
-      accessToken: data.access_token,
-      refreshToken: data.refresh_token,
-      isAuthenticated: true,
-      isLoading: false,
-    });
+  loginWithTokens: (res) => {
+    localStorage.setItem(ACCESS_KEY, res.access_token)
+    localStorage.setItem(REFRESH_KEY, res.refresh_token)
+    set({ user: res.user, isAuthenticated: true })
   },
 
-  logout: () => {
-    sessionStorage.removeItem('access_token');
-    sessionStorage.removeItem('refresh_token');
-    set({
-      user: null,
-      accessToken: null,
-      refreshToken: null,
-      isAuthenticated: false,
-    });
-  },
-
-  refreshSession: async () => {
-    const rt = get().refreshToken;
-    if (!rt) throw new Error('No refresh token');
-    const res = await authApi.refresh(rt);
-    const { access_token, refresh_token } = res.data.data;
-    sessionStorage.setItem('access_token', access_token);
-    sessionStorage.setItem('refresh_token', refresh_token);
-    set({ accessToken: access_token, refreshToken: refresh_token });
+  logout: async () => {
+    try {
+      await authApi.logout()
+    } catch {
+    }
+    localStorage.removeItem(ACCESS_KEY)
+    localStorage.removeItem(REFRESH_KEY)
+    set({ user: null, isAuthenticated: false })
   },
 
   fetchProfile: async () => {
     try {
-      const res = await authApi.getProfile();
-      set({ user: res.data.data, isAuthenticated: true, isLoading: false });
+      const user = await authApi.getProfile()
+      set({ user, isAuthenticated: true })
     } catch {
-      get().logout();
-      set({ isLoading: false });
+      localStorage.removeItem(ACCESS_KEY)
+      localStorage.removeItem(REFRESH_KEY)
+      set({ user: null, isAuthenticated: false })
     }
   },
 
   setUser: (user) => set({ user }),
 
-  handleOAuthCallback: (accessToken: string, refreshToken: string) => {
-    sessionStorage.setItem('access_token', accessToken);
-    sessionStorage.setItem('refresh_token', refreshToken);
-    set({ accessToken, refreshToken, isAuthenticated: true, isLoading: false });
-    authApi.getProfile().then((res) => {
-      set({ user: res.data.data });
-    }).catch(() => {
-      get().logout();
-    });
+  init: async () => {
+    const access = localStorage.getItem(ACCESS_KEY)
+    if (!access) {
+      set({ initializing: false, isAuthenticated: false })
+      return
+    }
+    await get().fetchProfile()
+    set({ initializing: false })
   },
-}));
+}))

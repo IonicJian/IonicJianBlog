@@ -1,92 +1,128 @@
-import { Link } from "react-router-dom";
-import { useAuthStore } from "../../store/authStore";
-import { useUIStore } from "../../store/uiStore";
-import { IconSun, IconMoon } from "../common/Icons";
-import UserMenu from "./UserMenu";
+import { List, Moon, Sun, X } from '@phosphor-icons/react'
+import { useState } from 'react'
+import { Link, NavLink } from 'react-router-dom'
+import { Button } from '@/components/ui/button'
+import { cn } from '@/lib/utils'
+import { useAuthStore } from '@/store/authStore'
+import { useUIStore } from '@/store/uiStore'
+import { UserMenu } from './UserMenu'
 
-export default function Header() {
-  const { isAuthenticated, user } = useAuthStore();
-  const { theme, toggleTheme } = useUIStore();
+const NAV = [
+  { to: '/', label: '首页' },
+  { to: '/blogs', label: '博客' },
+  { to: '/photography', label: '摄影' },
+  { to: '/trending', label: '趋势' },
+  { to: '/friends', label: '友链' },
+]
+
+function ThemeToggle() {
+  const theme = useUIStore((s) => s.theme)
+  const toggle = useUIStore((s) => s.toggleTheme)
   return (
-    <header className="fixed top-0 left-0 right-0 z-50 glass-strong">
-      <div className="max-w-5xl mx-auto px-6 flex items-center justify-between h-14">
+    <Button variant="ghost" size="icon" onClick={toggle} aria-label="切换主题">
+      {theme === 'dark' ? (
+        <Sun size={16} weight="regular" />
+      ) : (
+        <Moon size={16} weight="regular" />
+      )}
+    </Button>
+  )
+}
+
+export function Header() {
+  const isAuthenticated = useAuthStore((s) => s.isAuthenticated)
+  const [mobileOpen, setMobileOpen] = useState(false)
+
+  return (
+    <header className="fixed inset-x-0 top-0 z-10 h-14 border-b border-gray-950/5 bg-white/80 backdrop-blur dark:border-white/10 dark:bg-gray-950/80">
+      <div className="relative mx-auto h-14 max-w-7xl">
         <Link
           to="/"
-          className="font-bold text-xl text-slate-800 dark:text-slate-100 no-underline tracking-tight"
+          className="absolute top-1/2 left-[16px] -translate-y-1/2 text-sm font-semibold tracking-tight text-gray-950 sm:left-[24px] dark:text-white"
         >
           IonicJ
         </Link>
-
-        <nav className="flex items-center gap-6 text-sm">
-          <Link
-            to="/blogs"
-            className="text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-100 no-underline font-light tracking-wide transition-colors link-underline"
+        <nav className="absolute top-1/2 left-1/2 hidden -translate-x-1/2 -translate-y-1/2 items-center gap-1 md:flex">
+          {NAV.map((item) => (
+            <NavLink
+              key={item.to}
+              to={item.to}
+              end={item.to === '/'}
+              className={({ isActive }) =>
+                cn(
+                  'rounded-md px-3 py-1.5 text-sm transition-colors',
+                  isActive
+                    ? 'text-gray-950 dark:text-white'
+                    : 'text-gray-500 hover:text-gray-950 dark:text-gray-400 dark:hover:text-white',
+                )
+              }
+            >
+              {item.label}
+            </NavLink>
+          ))}
+        </nav>
+        <div className="absolute top-1/2 right-[16px] flex -translate-y-1/2 items-center gap-1 sm:right-[24px]">
+          <ThemeToggle />
+          {isAuthenticated ? (
+            <UserMenu />
+          ) : (
+            <Button
+              asChild
+              variant="ghost"
+              size="sm"
+              className="hidden md:inline-flex"
+            >
+              <Link to="/login">登录</Link>
+            </Button>
+          )}
+          <Button
+            variant="ghost"
+            size="icon"
+            className="md:hidden"
+            onClick={() => setMobileOpen((o) => !o)}
+            aria-label="菜单"
           >
-            博客
-          </Link>
-          <Link
-            to="/friends"
-            className="text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-100 no-underline font-light tracking-wide transition-colors link-underline"
-          >
-            友链
-          </Link>
-          <Link
-            to="/guestbook"
-            className="text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-100 no-underline font-light tracking-wide transition-colors link-underline"
-          >
-            留言
-          </Link>
-          <Link
-            to="/trending"
-            className="text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-100 no-underline font-light tracking-wide transition-colors link-underline"
-          >
-            趋势
-          </Link>
-
-          <button
-            onClick={toggleTheme}
-            title="切换主题"
-            className="text-slate-400 dark:text-slate-500 hover:text-slate-600 dark:hover:text-slate-300 bg-transparent border-none cursor-pointer p-1 transition-colors"
-          >
-            {theme === "dark" ? (
-              <IconSun className="w-4 h-4" />
+            {mobileOpen ? (
+              <X size={16} weight="regular" />
             ) : (
-              <IconMoon className="w-4 h-4" />
+              <List size={16} weight="regular" />
             )}
-          </button>
-
-          <div className="flex items-center gap-3">
-            {isAuthenticated ? (
-              <>
-                {user?.role === "admin" && (
-                  <Link
-                    to="/blogs/create"
-                    className="text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-100 no-underline text-sm font-light tracking-wide transition-colors"
-                  >
-                    写博客
-                  </Link>
-                )}
-                <UserMenu />
-              </>
-            ) : (
-              <>
-                <Link
-                  to="/login"
-                  className="text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-100 no-underline text-sm font-light tracking-wide transition-colors"
-                >
-                  登录
-                </Link>
-                <Link
-                  to="/register"
-                  className="btn-primary !py-1.5 !px-4 !text-xs no-underline"
-                >
-                  注册
-                </Link>
-              </>
+          </Button>
+        </div>
+      </div>
+      {mobileOpen && (
+        <nav className="border-t border-gray-950/5 dark:border-white/10 md:hidden">
+          <div className="mx-auto flex max-w-7xl flex-col px-4 py-2 sm:px-6">
+            {NAV.map((item) => (
+              <NavLink
+                key={item.to}
+                to={item.to}
+                end={item.to === '/'}
+                onClick={() => setMobileOpen(false)}
+                className={({ isActive }) =>
+                  cn(
+                    'rounded-md px-3 py-2 text-sm transition-colors',
+                    isActive
+                      ? 'text-gray-950 dark:text-white'
+                      : 'text-gray-500 hover:bg-gray-950/5 hover:text-gray-950 dark:text-gray-400 dark:hover:bg-white/10 dark:hover:text-white',
+                  )
+                }
+              >
+                {item.label}
+              </NavLink>
+            ))}
+            {!isAuthenticated && (
+              <NavLink
+                to="/login"
+                onClick={() => setMobileOpen(false)}
+                className="rounded-md px-3 py-2 text-sm text-gray-500 hover:bg-gray-950/5 hover:text-gray-950 dark:text-gray-400 dark:hover:bg-white/10 dark:hover:text-white"
+              >
+                登录
+              </NavLink>
             )}
           </div>
         </nav>
-      </div>
+      )}
     </header>
-  );
+  )
 }

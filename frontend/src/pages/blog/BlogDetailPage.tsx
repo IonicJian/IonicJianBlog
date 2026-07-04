@@ -1,108 +1,256 @@
-import { useState, useEffect } from 'react';
-import { useParams, Link, useNavigate } from 'react-router-dom';
-import { useAuthStore } from '../../store/authStore';
-import { blogApi } from '../../api/blog';
-import MarkdownRenderer from '../../components/common/MarkdownRenderer';
-import LikeButton from '../../components/like/LikeButton';
-import CommentList from '../../components/comment/CommentList';
-import { IconQuote, IconArrowLeft } from '../../components/common/Icons';
-import Lightbox from '../../components/common/Lightbox';
-import TableOfContents from '../../components/common/TableOfContents';
-import type { Blog } from '../../types/blog';
+import { ArrowLeft, Eye, PencilSimple, Quotes } from '@phosphor-icons/react'
+import { useEffect, useRef, useState } from 'react'
+import { Link, useNavigate, useParams } from 'react-router-dom'
+import { getBlog, incrementView } from '@/api/blogs'
+import { getBlogLikeStatus, toggleBlogLike } from '@/api/comments'
+import { MarkdownRenderer } from '@/components/common/MarkdownRenderer'
+import { TableOfContents } from '@/components/common/TableOfContents'
+import { CommentForm } from '@/components/comment/CommentForm'
+import { CommentList } from '@/components/comment/CommentList'
+import { LikeButton } from '@/components/like/LikeButton'
+import { Button } from '@/components/ui/button'
+import { useAuthStore } from '@/store/authStore'
+import { toast } from 'sonner'
+import type { Blog } from '@/types/blog'
+import type { Comment } from '@/types/comment'
 
-export default function BlogDetailPage() {
-  const { id } = useParams();
-  const { isAuthenticated } = useAuthStore();
-  const [blog, setBlog] = useState<Blog | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [pendingQuote, setPendingQuote] = useState<{ anchorStart: string; anchorText: string } | null>(null);
-  const [activeQuote, setActiveQuote] = useState<{ anchorStart: string; anchorText: string } | null>(null);
-  const [iconPos, setIconPos] = useState<{ x: number; y: number } | null>(null);
-  const [iconVisible, setIconVisible] = useState(false);
-  const [lightbox, setLightbox] = useState<{ src: string; alt: string } | null>(null);
-  const { user } = useAuthStore();
-  const isAdmin = user?.role === 'admin';
-  const navigate = useNavigate();
+interface QuoteData {
+  text: string
+  start: string
+}
+
+interface QuoteBtn {
+  x: number
+  y: number
+  text: string
+  start: string
+}
+
+function formatDate(s: string): string {
+  return new Date(s).toLocaleDateString('zh-CN', {
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  })
+}
+
+export function BlogDetailPage() {
+  const { id } = useParams()
+  const navigate = useNavigate()
+  const user = useAuthStore((s) => s.user)
+
+  const [blog, setBlog] = useState<Blog | null>(null)
+  const [loading, setLoading] = useState(true)
+  const [liked, setLiked] = useState(false)
+  const [likeCount, setLikeCount] = useState(0)
+  const [commentRefresh, setCommentRefresh] = useState(0)
+  const [replyTo, setReplyTo] = useState<Comment | null>(null)
+  const [quote, setQuote] = useState<QuoteData | null>(null)
+  const [quoteBtn, setQuoteBtn] = useState<QuoteBtn | null>(null)
+  const articleRef = useRef<HTMLDivElement>(null)
+
+  const blogId = Number(id)
 
   useEffect(() => {
-    if (!id) return;
-    let cancelled = false; setLoading(true);
-    blogApi.getById(Number(id)).then((res) => { if (cancelled) return; setBlog(res.data.data); blogApi.incrementView(Number(id)).catch(() => {}); }).catch(() => { if (!cancelled) setBlog(null); }).finally(() => { if (!cancelled) setLoading(false); });
-    return () => { cancelled = true; };
-  }, [id]);
+    if (!id) return
+    let cancelled = false
+    setLoading(true)
+    getBlog(blogId)
+      .then((b) => {
+        if (cancelled) return
+        setBlog(b)
+        setLikeCount(b.like_count)
+        setLiked(b.liked_by_me)
+      })
+      .finally(() => {
+        if (!cancelled) setLoading(false)
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [blogId, id])
 
   useEffect(() => {
-    const handleMouseUp = (e: MouseEvent) => {
-      if (e.button === 2) return;
-      if ((e.target as HTMLElement).closest('[data-quote-icon]')) return;
-      setTimeout(() => {
-        const sel = window.getSelection();
-        if (!sel || sel.isCollapsed || !sel.toString().trim()) { setIconVisible(false); return; }
-        const text = sel.toString().trim();
-        if (text.length < 2 || text.length > 500) { setIconVisible(false); return; }
-        const range = sel.getRangeAt(0);
-        let node: Node | null = range.startContainer; let anchorStart = '';
-        while (node) { if (node instanceof HTMLElement) { const pid = node.getAttribute('data-p-id'); if (pid) { anchorStart = pid; break; } } node = node.parentElement; }
-        if (!anchorStart) { setIconVisible(false); return; }
-        const rect = range.getBoundingClientRect();
-        setPendingQuote({ anchorStart, anchorText: text }); setIconPos({ x: rect.right + 5, y: rect.top + window.scrollY - 5 }); setIconVisible(true);
-      }, 0);
-    };
-    document.addEventListener('mouseup', handleMouseUp);
-    return () => document.removeEventListener('mouseup', handleMouseUp);
-  }, []);
+    if (!id) return
+    const key = `blog-view-${id}`
+    if (sessionStorage.getItem(key)) return
+    sessionStorage.setItem(key, '1')
+    incrementView(blogId).catch(() => {})
+  }, [blogId, id])
 
-  if (loading) return <div className="py-20 text-center text-slate-400 font-light">加载中...</div>;
-  if (!blog) return <div className="py-20 text-center"><p className="text-slate-500 mb-4">文章不存在</p><Link to="/blogs" className="text-amber-600 hover:text-amber-700">返回博客列表</Link></div>;
+  useEffect(() => {
+    if (!id || !user) return
+    getBlogLikeStatus(blogId)
+      .then((s) => {
+        setLiked(s.liked)
+        setLikeCount(s.count)
+      })
+      .catch(() => {})
+  }, [blogId, id, user])
+
+  const handleLikeToggle = async () => {
+    if (!user) {
+      toast.info('请先登录后再点赞')
+      throw new Error('not authenticated')
+    }
+    const res = await toggleBlogLike(blogId)
+    setLiked(res.liked)
+    setLikeCount(res.count)
+  }
+
+  const handleSelection = () => {
+    const sel = window.getSelection()
+    const text = sel?.toString().trim() ?? ''
+    if (text.length < 2) {
+      setQuoteBtn(null)
+      return
+    }
+    const range = sel?.getRangeAt(0)
+    if (!range) return
+    const container = range.startContainer
+    const el =
+      container.nodeType === Node.ELEMENT_NODE
+        ? (container as HTMLElement)
+        : container.parentElement
+    const p = el?.closest('p[data-p-id]') ?? null
+    if (!p) {
+      setQuoteBtn(null)
+      return
+    }
+    const rect = range.getBoundingClientRect()
+    setQuoteBtn({
+      x: rect.left + rect.width / 2,
+      y: rect.top,
+      text,
+      start: p.getAttribute('data-p-id') ?? '',
+    })
+  }
+
+  const applyQuote = () => {
+    if (!quoteBtn) return
+    setQuote({ text: quoteBtn.text, start: quoteBtn.start })
+    setQuoteBtn(null)
+    window.getSelection()?.removeAllRanges()
+    document.getElementById('comment-form')?.scrollIntoView({ behavior: 'smooth' })
+  }
+
+  if (loading) {
+    return (
+      <div className="mx-auto max-w-3xl px-6 py-12 text-sm text-muted-foreground md:px-12">
+        加载中...
+      </div>
+    )
+  }
+  if (!blog) {
+    return (
+      <div className="mx-auto max-w-3xl px-6 py-12 md:px-12">
+        <p className="text-sm text-muted-foreground">文章不存在</p>
+        <Button asChild variant="ghost" size="sm" className="mt-4">
+          <Link to="/blogs">返回列表</Link>
+        </Button>
+      </div>
+    )
+  }
 
   return (
-    <div className="py-10 page-enter max-w-5xl mx-auto">
-	<div className="flex gap-10">
-<aside className="hidden lg:block w-48 flex-shrink-0 order-first">
-      <div className="sticky top-20">
-        <TableOfContents content={blog.content} />
+    <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 md:py-12">
+      <div className="grid gap-8 lg:grid-cols-[200px_1fr] lg:gap-0">
+        <div className="hidden lg:block lg:pr-8">
+          <div className="sticky top-20">
+            <TableOfContents containerRef={articleRef} />
+          </div>
+        </div>
+        <article
+          ref={articleRef}
+          className="max-w-3xl lg:border-l lg:border-gray-950/5 lg:pl-12 dark:lg:border-white/10"
+          onMouseUp={handleSelection}
+        >
+          <div className="flex items-center justify-between pb-6">
+            <button
+              type="button"
+              onClick={() => navigate(-1)}
+              className="flex items-center gap-1 text-sm text-muted-foreground transition-colors hover:text-foreground"
+            >
+              <ArrowLeft size={16} weight="regular" />
+              返回
+            </button>
+            {user?.role === 'admin' && (
+              <Button asChild variant="outline" size="sm">
+                <Link to={`/admin/blogs/${blog.id}/edit`}>
+                  <PencilSimple size={14} weight="regular" />
+                  编辑
+                </Link>
+              </Button>
+            )}
+          </div>
+          <h1 className="text-5xl font-medium tracking-tighter text-balance text-gray-950 md:text-6xl dark:text-white">
+            {blog.title}
+          </h1>
+          <div className="mt-6 flex flex-wrap items-center gap-3 text-xs text-gray-500 dark:text-gray-400">
+            <span className="font-mono font-medium tracking-widest uppercase tabular-nums">
+              {formatDate(blog.created_at)}
+            </span>
+            <span className="flex items-center gap-1 tabular-nums">
+              <Eye size={14} weight="regular" />
+              {blog.view_count}
+            </span>
+            {blog.tags?.map((t) => (
+              <span
+                key={t.id}
+                className="rounded-full bg-gray-950/5 px-2 py-0.5 dark:bg-white/10"
+              >
+                {t.name}
+              </span>
+            ))}
+          </div>
+          <div className="mt-10 border-t border-gray-950/5 pt-10 dark:border-white/10">
+            <MarkdownRenderer content={blog.content} />
+          </div>
+          <div className="mt-8 border-t border-border pt-6">
+            <LikeButton
+              count={likeCount}
+              liked={liked}
+              onToggle={handleLikeToggle}
+              size={20}
+            />
+          </div>
+        </article>
       </div>
-    </aside>
-<div className="flex-1 min-w-0">
-      <div className="flex items-center justify-between mb-10">
-        <button onClick={() => navigate(-1)} className="inline-flex items-center gap-1.5 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 text-sm no-underline font-light transition-colors bg-transparent border-none cursor-pointer"><IconArrowLeft className="w-3.5 h-3.5" /> 返回</button>
-        {isAdmin && <Link to={`/blogs/${blog.id}/edit`} className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 text-sm no-underline font-light transition-colors">编辑</Link>}
-      </div>
 
-      {blog.cover_image && <img src={blog.cover_image} alt={blog.title} className="w-full h-64 object-cover rounded-xl mb-10" />}
+      <section id="comments" className="mx-auto mt-12 max-w-3xl">
+        <h2 className="pb-6 text-2xl font-semibold tracking-tight">评论</h2>
+        <div id="comment-form" className="pb-8">
+          <CommentForm
+            blogId={blog.id}
+            replyTo={replyTo}
+            quote={quote}
+            onSubmitted={() => setCommentRefresh((k) => k + 1)}
+            onCancelReply={() => setReplyTo(null)}
+            onCancelQuote={() => setQuote(null)}
+          />
+        </div>
+        <CommentList
+          blogId={blog.id}
+          refreshKey={commentRefresh}
+          onReply={(c) => {
+            setReplyTo(c)
+            document.getElementById('comment-form')?.scrollIntoView({ behavior: 'smooth' })
+          }}
+          onChanged={() => setCommentRefresh((k) => k + 1)}
+        />
+      </section>
 
-      <h1 className="font-bold text-3xl text-slate-800 dark:text-slate-100 mb-4 leading-tight">{blog.title}</h1>
-
-      <div className="flex items-center gap-3 text-xs text-slate-400 dark:text-slate-500 font-light mb-10">
-        <span>{new Date(blog.created_at).toLocaleDateString('zh-CN')}</span>
-        <span className="text-slate-300 dark:text-slate-700">·</span>
-        <span>{blog.view_count} 阅读</span>
-        {blog.category && <><span className="text-slate-300 dark:text-slate-700">·</span><span>{blog.category.name}</span></>}
-        {blog.tags?.map(t => <span key={t.id} className="px-1.5 py-0.5 border border-black/5 dark:border-white/5 rounded text-[10px]" style={{ color: t.color }}>{t.name}</span>)}
-      </div>
-
-      <div className="border-t border-black/5 dark:border-white/5 pt-10 mb-10">
-        <MarkdownRenderer content={blog.content} onImageClick={(src, alt) => setLightbox({ src, alt })} />
-      </div>
-
-      {iconVisible && iconPos && isAuthenticated && (
-        <button data-quote-icon onClick={() => { setIconVisible(false); setActiveQuote(pendingQuote); setTimeout(() => document.getElementById('comment-box')?.scrollIntoView({ behavior: 'smooth' }), 100); }}
-          className="fixed z-50 bg-amber-500 text-white w-8 h-8 rounded-full shadow-lg flex items-center justify-center hover:bg-amber-600 cursor-pointer" style={{ left: iconPos.x, top: iconPos.y }}>
-          <IconQuote className="w-4 h-4" />
+      {quoteBtn && (
+        <button
+          type="button"
+          onClick={applyQuote}
+          style={{ top: `${quoteBtn.y}px`, left: `${quoteBtn.x}px` }}
+          className="fixed z-50 flex -translate-x-1/2 -translate-y-full items-center gap-1 rounded-md border border-border bg-popover px-2 py-1 text-xs backdrop-blur-md transition-colors hover:bg-accent"
+        >
+          <Quotes size={14} weight="regular" />
+          引用
         </button>
       )}
-
-      <div className="flex items-center justify-center mb-10">
-        <LikeButton blogId={blog.id} initialLiked={blog.liked_by_me} initialCount={blog.like_count} />
-      </div>
-
-      <div id="comment-box" className="border-t border-black/5 dark:border-white/5 pt-10">
-        <CommentList blogId={blog.id} quoteAnchor={activeQuote?.anchorStart} quoteText={activeQuote?.anchorText} onQuoteClear={() => setActiveQuote(null)} />
-      </div>
-
-      {lightbox && <Lightbox src={lightbox.src} alt={lightbox.alt} onClose={() => setLightbox(null)} />}
     </div>
-</div>
-    </div>
-  );
+  )
 }

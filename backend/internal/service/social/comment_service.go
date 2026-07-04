@@ -12,6 +12,7 @@ type CommentService interface {
 	GetByID(ctx context.Context, id int64) (*model.Comment, error)
 	Delete(ctx context.Context, id int64) error
 	List(ctx context.Context, blogID int64, page, pageSize int) ([]*model.Comment, int64, error)
+	ListAll(ctx context.Context, page, pageSize int) ([]*model.Comment, int64, error)
 }
 
 type CreateCommentParams struct {
@@ -47,4 +48,8 @@ func (s *commentService) Delete(ctx context.Context, id int64) error { return s.
 
 func (s *commentService) List(ctx context.Context, blogID int64, page, pageSize int) ([]*model.Comment, int64, error) {
 	return s.commentRepo.ListByBlogID(ctx, blogID, page, pageSize)
+}
+
+func (s *commentService) ListAll(ctx context.Context, page, pageSize int) ([]*model.Comment, int64, error) {
+	return s.commentRepo.ListAll(ctx, page, pageSize)
 }

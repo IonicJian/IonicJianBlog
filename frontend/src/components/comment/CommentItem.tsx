@@ -1,116 +1,111 @@
-import { useState } from 'react';
-import LikeButton from '../like/LikeButton';
-import CommentForm from './CommentForm';
-import MarkdownRenderer from '../common/MarkdownRenderer';
-import { useAuthStore } from '../../store/authStore';
-import { commentApi } from '../../api/social';
-import type { Comment } from '../../types/comment';
+import { ChatCircle, Trash } from '@phosphor-icons/react'
+import { deleteComment, toggleCommentLike } from '@/api/comments'
+import { LikeButton } from '@/components/like/LikeButton'
+import { cn } from '@/lib/utils'
+import { useAuthStore } from '@/store/authStore'
+import { toast } from 'sonner'
+import type { Comment } from '@/types/comment'
 
-export default function CommentItem({ comment, blogId, onRefresh, depth = 0 }: {
-  comment: Comment;
-  blogId: number;
-  onRefresh: () => void;
-  depth?: number;
-}) {
-  const [showReply, setShowReply] = useState(false);
-  const [deleting, setDeleting] = useState(false);
-  const { user, isAuthenticated } = useAuthStore();
-  const isOwner = isAuthenticated && user?.id === comment.user_id;
-  const isAdmin = user?.role === 'admin';
-  const canDelete = isOwner || isAdmin;
-  const maxDepth = 3;
+interface CommentItemProps {
+  comment: Comment
+  onReply: (comment: Comment) => void
+  onChanged: () => void
+}
+
+function formatDate(s: string): string {
+  return new Date(s).toLocaleString('zh-CN', {
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+  })
+}
+
+export function CommentItem({ comment, onReply, onChanged }: CommentItemProps) {
+  const user = useAuthStore((s) => s.user)
+  const canDelete =
+    !!user && (user.role === 'admin' || user.id === comment.user_id)
+  const author = comment.author
+  const name = author?.display_name || author?.username || '匿名'
 
   const handleDelete = async () => {
-    if (!confirm('确定删除这条评论？')) return;
-    setDeleting(true);
-    try { await commentApi.delete(comment.id); onRefresh(); }
-    catch { setDeleting(false); }
-  };
-
-  const authorName = comment.author?.display_name || comment.author?.username || '匿名';
-
-  const handleQuoteJump = () => {
-    if (comment.anchor_start) {
-      const el = document.querySelector(`[data-p-id="${comment.anchor_start}"]`);
-      if (el) {
-        el.scrollIntoView({ behavior: 'smooth', block: 'center' });
-        el.classList.add('ring-2', 'ring-amber-400', 'rounded');
-        setTimeout(() => el.classList.remove('ring-2', 'ring-amber-400', 'rounded'), 2000);
-      }
+    if (!window.confirm('确定删除这条评论?')) return
+    try {
+      await deleteComment(comment.id)
+      onChanged()
+    } catch {
+      toast.error('删除失败')
     }
-  };
+  }
 
   return (
-    <div className={`${depth > 0 ? 'ml-6 pl-4 border-l-2 border-black/5 dark:border-white/5' : ''}`}>
-      <div className="flex items-start gap-2 py-2">
-        <div className="w-7 h-7 rounded-full bg-slate-200 dark:bg-slate-700 overflow-hidden flex items-center justify-center flex-shrink-0 mt-0.5">
-          {comment.author?.avatar_url ? (
-            <img
-              src={comment.author.avatar_url.startsWith('http') ? comment.author.avatar_url : `http://localhost:8080${comment.author.avatar_url}`}
-              alt=""
-              className="w-full h-full object-cover"
-            />
-          ) : (
-            <span className="text-xs font-medium text-slate-400 dark:text-slate-400">
-              {authorName[0].toUpperCase()}
-            </span>
-          )}
+    <div className="flex gap-3">
+      <div className="flex h-8 w-8 shrink-0 items-center justify-center overflow-hidden rounded-full border border-border bg-card text-xs font-medium">
+        {author?.avatar_url ? (
+          <img
+            src={author.avatar_url}
+            alt={name}
+            className="h-full w-full object-cover"
+          />
+        ) : (
+          name[0]
+        )}
+      </div>
+      <div className="flex-1">
+        <div className="flex items-center gap-2">
+          <span className="text-sm font-medium">{name}</span>
+          <span className="text-xs text-muted-foreground tabular-nums">
+            {formatDate(comment.created_at)}
+          </span>
         </div>
-        <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-2 mb-1">
-            <span className="text-sm font-medium text-slate-800 dark:text-slate-100">{authorName}</span>
-            <span className="text-xs text-slate-400 dark:text-slate-400">
-              {new Date(comment.created_at).toLocaleDateString('zh-CN')}
-            </span>
-          </div>
-
-          {/* Quoted text from article */}
-          {comment.anchor_text && (
+        {comment.anchor_text && (
+          <blockquote className="mt-1 border-l-2 border-primary pl-2 text-xs text-muted-foreground">
+            {comment.anchor_text}
+          </blockquote>
+        )}
+        <p className="mt-1 whitespace-pre-wrap text-sm">{comment.content}</p>
+        <div className="mt-2 flex items-center gap-4">
+          <LikeButton
+            count={comment.like_count}
+            liked={comment.liked_by_me}
+            onToggle={() => toggleCommentLike(comment.id)}
+            size={14}
+          />
+          <button
+            type="button"
+            onClick={() => onReply(comment)}
+            className="flex items-center gap-1 text-xs text-muted-foreground transition-colors hover:text-foreground"
+          >
+            <ChatCircle size={14} weight="regular" />
+            回复
+          </button>
+          {canDelete && (
             <button
-              onClick={handleQuoteJump}
-              className="text-left w-full border-l-3 border-amber-400 bg-amber-50/50 dark:bg-amber-950/20 dark:border-amber-600 pl-3 py-1.5 rounded-r text-sm text-slate-500 dark:text-slate-400 italic mb-1.5 hover:bg-amber-50 dark:hover:bg-amber-950/30 cursor-pointer"
+              type="button"
+              onClick={handleDelete}
+              className={cn(
+                'flex items-center gap-1 text-xs text-muted-foreground transition-colors',
+                'hover:text-destructive',
+              )}
             >
-              {comment.anchor_text.length > 150 ? comment.anchor_text.slice(0, 150) + '...' : comment.anchor_text}
+              <Trash size={14} weight="regular" />
+              删除
             </button>
           )}
-
-          <div className="text-sm text-slate-600 dark:text-slate-300 mb-1 break-words">
-            <MarkdownRenderer content={comment.content} compact noDataPid />
-          </div>
-          <div className="flex items-center gap-2">
-            <LikeButton commentId={comment.id} initialLiked={comment.liked_by_me} initialCount={comment.like_count} />
-            {depth < maxDepth && (
-              <button onClick={() => setShowReply(!showReply)}
-                className="text-xs text-slate-400 hover:text-amber-500 bg-transparent border-none cursor-pointer">
-                {showReply ? '取消回复' : '回复'}
-              </button>
-            )}
-            {canDelete && (
-              <button onClick={handleDelete} disabled={deleting}
-                className="text-xs text-slate-300 hover:text-red-500 bg-transparent border-none cursor-pointer">
-                {deleting ? '删除中...' : '删除'}
-              </button>
-            )}
-          </div>
-
-          {showReply && (
-            <div className="mt-2">
-              <CommentForm blogId={blogId} parentId={comment.id}
-                placeholder={`回复 ${authorName}...`}
-                onSuccess={() => { setShowReply(false); onRefresh(); }}
-                onCancel={() => setShowReply(false)} />
-            </div>
-          )}
         </div>
+        {comment.replies && comment.replies.length > 0 && (
+          <div className="mt-4 flex flex-col gap-4 border-l border-border pl-4">
+            {comment.replies.map((r) => (
+              <CommentItem
+                key={r.id}
+                comment={r}
+                onReply={onReply}
+                onChanged={onChanged}
+              />
+            ))}
+          </div>
+        )}
       </div>
-
-      {comment.replies && comment.replies.length > 0 && (
-        <div>
-          {comment.replies.map((reply) => (
-            <CommentItem key={reply.id} comment={reply} blogId={blogId} onRefresh={onRefresh} depth={depth + 1} />
-          ))}
-        </div>
-      )}
     </div>
-  );
+  )
 }

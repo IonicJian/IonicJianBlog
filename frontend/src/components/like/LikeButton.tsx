@@ -1,49 +1,62 @@
-import { useState } from 'react';
-import { likeApi } from '../../api/social';
-import { IconHeart } from '../common/Icons';
+import { Heart } from '@phosphor-icons/react'
+import { useEffect, useState } from 'react'
+import { cn } from '@/lib/utils'
 
-interface Props {
-  blogId?: number;
-  commentId?: number;
-  initialLiked: boolean;
-  initialCount: number;
+interface LikeButtonProps {
+  count: number
+  liked: boolean
+  onToggle: () => Promise<unknown> | void
+  size?: number
+  className?: string
 }
 
-export default function LikeButton({ blogId, commentId, initialLiked, initialCount }: Props) {
-  const [liked, setLiked] = useState(initialLiked);
-  const [count, setCount] = useState(initialCount);
+export function LikeButton({
+  count,
+  liked,
+  onToggle,
+  size = 18,
+  className,
+}: LikeButtonProps) {
+  const [optimisticLiked, setOptimisticLiked] = useState(liked)
+  const [optimisticCount, setOptimisticCount] = useState(count)
+  const [loading, setLoading] = useState(false)
 
-  const handleToggle = async () => {
-    const prevLiked = liked;
-    const prevCount = count;
-    setLiked(!liked);
-    setCount(liked ? count - 1 : count + 1);
+  useEffect(() => {
+    setOptimisticLiked(liked)
+    setOptimisticCount(count)
+  }, [liked, count])
+
+  const handle = async () => {
+    if (loading) return
+    const next = !optimisticLiked
+    setOptimisticLiked(next)
+    setOptimisticCount((c) => (next ? c + 1 : c - 1))
+    setLoading(true)
     try {
-      if (blogId) {
-        const res = await likeApi.toggleBlog(blogId);
-        setLiked(res.data.data.liked);
-        setCount(res.data.data.count);
-      } else if (commentId) {
-        const res = await likeApi.toggleComment(commentId);
-        setLiked(res.data.data.liked);
-        setCount(res.data.data.count);
-      }
+      await onToggle()
     } catch {
-      setLiked(prevLiked);
-      setCount(prevCount);
+      setOptimisticLiked(!next)
+      setOptimisticCount((c) => (next ? c - 1 : c + 1))
+    } finally {
+      setLoading(false)
     }
-  };
+  }
 
   return (
     <button
-      onClick={handleToggle}
-      className={`inline-flex items-center gap-1 text-sm px-3 py-1.5 rounded-xl border-none cursor-pointer transition-colors ${
-        liked
-          ? 'text-amber-600 dark:text-amber-500 bg-amber-50/80 dark:bg-amber-950/30'
-          : 'text-slate-400 dark:text-slate-400 hover:text-amber-500 bg-transparent hover:bg-amber-50/60 dark:hover:bg-amber-950/20'
-      }`}
+      type="button"
+      onClick={handle}
+      disabled={loading}
+      className={cn(
+        'inline-flex items-center gap-1.5 text-xs transition-colors disabled:opacity-50',
+        optimisticLiked
+          ? 'text-primary'
+          : 'text-muted-foreground hover:text-foreground',
+        className,
+      )}
     >
-      <IconHeart filled={liked} className="w-4 h-4" /> <span>{count}</span>
+      <Heart size={size} weight={optimisticLiked ? 'fill' : 'regular'} />
+      <span className="tabular-nums">{optimisticCount}</span>
     </button>
-  );
+  )
 }

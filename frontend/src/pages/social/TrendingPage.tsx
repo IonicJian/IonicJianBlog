@@ -1,45 +1,86 @@
-import { useState, useEffect } from 'react';
-import { trendingApi } from '../../api/trending';
-import type { TrendingRepo } from '../../types/trending';
-import { IconStar, IconGitFork } from '../../components/common/Icons';
+import { GitFork, Star } from "@phosphor-icons/react";
+import { useEffect, useState } from "react";
+import { getTrending } from "@/api/social";
+import type { TrendingRepo } from "@/types/trending";
 
-const langColors: Record<string, string> = { Go:'bg-cyan-500',JavaScript:'bg-yellow-400',TypeScript:'bg-blue-500',Python:'bg-green-500',Rust:'bg-orange-600',Java:'bg-red-500','C++':'bg-pink-500',C:'bg-slate-500',Ruby:'bg-red-600',Swift:'bg-orange-500',Kotlin:'bg-purple-500' };
-
-export default function TrendingPage() {
+export function TrendingPage() {
   const [repos, setRepos] = useState<TrendingRepo[]>([]);
   const [loading, setLoading] = useState(true);
-  useEffect(() => { trendingApi.get().then(r => setRepos(r.data.data||[])).catch(()=>{}).finally(()=>setLoading(false)); }, []);
+
+  useEffect(() => {
+    let cancelled = false;
+    getTrending()
+      .then((r) => {
+        if (!cancelled) setRepos(r || []);
+      })
+      .finally(() => {
+        if (!cancelled) setLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   return (
-    <div className="py-10 page-enter max-w-3xl mx-auto">
-      <h1 className="font-bold text-3xl text-slate-800 dark:text-slate-100 mb-1">GitHub 趋势</h1>
-      <p className="text-sm text-slate-400 dark:text-slate-500 font-light mb-10">本周热门开源项目</p>
-
-      {loading ? <p className="text-center py-16 text-slate-400 font-light">加载中...</p>
-      : repos.length === 0 ? <p className="text-center py-16 text-slate-400 font-light">暂无数据</p>
-      : <div className="space-y-3">
-          {repos.map((repo, i) => (
-            <a key={repo.full_name} href={repo.url} target="_blank" rel="noopener noreferrer" className="no-underline block">
-              <div className="glass rounded-xl p-5 hover-lift hover:border-amber-500/30 transition-all duration-300 animate-fade-up" style={{animationDelay:`${0.04*i}s`}}>
-                <div className="flex items-start justify-between">
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 mb-1">
-                      <span className="text-xs text-slate-400 font-light w-5">{i+1}</span>
-                      <span className="text-slate-400 text-xs font-light">/{repo.full_name}</span>
-                    </div>
-                    <h3 className="text-base font-medium text-slate-800 dark:text-slate-200 mb-1">{repo.name}</h3>
-                    <p className="text-sm text-slate-500 dark:text-slate-400 font-light line-clamp-2 mb-3">{repo.description||'暂无描述'}</p>
-                    <div className="flex items-center gap-4 text-xs text-slate-400 font-light">
-                      {repo.language && <span className="flex items-center gap-1"><span className={`w-2.5 h-2.5 rounded-full ${langColors[repo.language]||'bg-slate-400'}`} />{repo.language}</span>}
-                      <span className="inline-flex items-center gap-1"><IconStar className="w-3.5 h-3.5" />{repo.stars.toLocaleString()}</span>
-                      <span className="inline-flex items-center gap-1"><IconGitFork className="w-3.5 h-3.5" />{repo.forks.toLocaleString()}</span>
+    <div className="mx-auto max-w-7xl">
+      <div className="mt-24 px-4 sm:px-6">
+        <h1 className="text-6xl tracking-tighter text-balance text-gray-950 sm:text-7xl lg:text-8xl dark:text-white">
+          GitHub Trending
+        </h1>
+        <p className="mt-10 text-lg text-gray-500 dark:text-gray-400">
+          最近热门的 GitHub 仓库。
+        </p>
+      </div>
+      <div className="mt-12">
+        {loading ? (
+          <p className="px-4 py-8 text-sm text-gray-500 sm:px-6 dark:text-gray-400">
+            加载中...
+          </p>
+        ) : repos.length === 0 ? (
+          <p className="px-4 py-8 text-sm text-gray-500 sm:px-6 dark:text-gray-400">
+            暂无数据
+          </p>
+        ) : (
+          <div className="bp-line">
+            {repos.map((r) => (
+              <a
+                key={r.full_name}
+                href={r.url}
+                target="_blank"
+                rel="noreferrer"
+                className="bp-line block px-4 py-8 transition-colors hover:bg-gray-950/2.5 sm:px-6 dark:hover:bg-white/2.5"
+              >
+                <div className="grid gap-2 lg:grid-cols-[14rem_2.5rem_minmax(0,1fr)] lg:gap-0">
+                  <div className="font-mono text-sm font-medium tracking-widest text-gray-500 uppercase">
+                    {r.language || "—"}
+                  </div>
+                  <div className="hidden lg:block" />
+                  <div className="lg:pl-2">
+                    <span className="font-semibold text-gray-950 transition-colors hover:text-sky-500 dark:text-white">
+                      {r.full_name}
+                    </span>
+                    {r.description && (
+                      <p className="mt-4 line-clamp-2 leading-7 text-gray-600 dark:text-gray-300">
+                        {r.description}
+                      </p>
+                    )}
+                    <div className="mt-4 flex items-center gap-4 text-xs text-gray-500 tabular-nums dark:text-gray-400">
+                      <span className="flex items-center gap-1">
+                        <Star size={12} weight="regular" />
+                        {r.stars}
+                      </span>
+                      <span className="flex items-center gap-1">
+                        <GitFork size={12} weight="regular" />
+                        {r.forks}
+                      </span>
                     </div>
                   </div>
                 </div>
-              </div>
-            </a>
-          ))}
-        </div>}
+              </a>
+            ))}
+          </div>
+        )}
+      </div>
     </div>
   );
 }

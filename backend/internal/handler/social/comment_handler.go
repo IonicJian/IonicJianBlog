@@ -34,6 +34,23 @@ func (h *CommentHandler) List(c *gin.Context) {
 	})
 }
 
+func (h *CommentHandler) ListAll(c *gin.Context) {
+	p := pagination.Parse(c)
+	comments, total, err := h.service.ListAll(c.Request.Context(), p.Page, p.PageSize)
+	if err != nil {
+		resp.InternalError(c, err.Error())
+		return
+	}
+	items := make([]*dto.CommentResponse, 0, len(comments))
+	for _, cm := range comments {
+		items = append(items, mapper.CommentToResponse(cm))
+	}
+	resp.Paginated(c, resp.PaginatedData{
+		Items: items, Total: total, Page: p.Page, PageSize: p.PageSize,
+		TotalPages: pagination.TotalPages(total, p.PageSize),
+	})
+}
+
 func (h *CommentHandler) Create(c *gin.Context) {
 	blogID, err := strconv.ParseInt(c.Param("id"), 10, 64)
 	if err != nil { resp.BadRequest(c, "invalid blog id"); return }

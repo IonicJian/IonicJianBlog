@@ -1,38 +1,42 @@
-import { useEffect, useRef } from 'react';
-import { useSearchParams, useNavigate } from 'react-router-dom';
-import { useAuthStore } from '../../store/authStore';
-import { authApi } from '../../api/auth';
+import { useEffect, useState } from 'react'
+import { useNavigate, useSearchParams } from 'react-router-dom'
+import { exchangeCode } from '@/api/auth'
+import { extractMessage } from '@/api/client'
+import { useAuthStore } from '@/store/authStore'
 
-export default function OAuthCallbackPage() {
-  const [params] = useSearchParams();
-  const navigate = useNavigate();
-  const { setAuthFromResponse } = useAuthStore();
-  const exchanged = useRef(false);
+export function OAuthCallbackPage() {
+  const navigate = useNavigate()
+  const [params] = useSearchParams()
+  const loginWithTokens = useAuthStore((s) => s.loginWithTokens)
+  const [message, setMessage] = useState('正在处理登录...')
 
   useEffect(() => {
-    if (exchanged.current) return;
-    exchanged.current = true;
-
-    const code = params.get('code');
-
-    if (!code) {
-      navigate('/login?error=oauth_failed', { replace: true });
-      return;
+    const code = params.get('code')
+    const err = params.get('error')
+    if (err) {
+      setMessage(`登录失败: ${err}`)
+      setTimeout(() => navigate('/login'), 2000)
+      return
     }
-
-    authApi.exchangeCode(code)
+    if (!code) {
+      setMessage('缺少授权码')
+      setTimeout(() => navigate('/login'), 2000)
+      return
+    }
+    exchangeCode(code)
       .then((res) => {
-        setAuthFromResponse(res.data.data);
-        navigate('/', { replace: true });
+        loginWithTokens(res)
+        navigate('/')
       })
-      .catch(() => {
-        navigate('/login?error=oauth_failed', { replace: true });
-      });
-  }, [params, navigate, setAuthFromResponse]);
+      .catch((e) => {
+        setMessage(extractMessage(e))
+        setTimeout(() => navigate('/login'), 2000)
+      })
+  }, [params, navigate, loginWithTokens])
 
   return (
-    <div className="py-20 text-center text-slate-400 dark:text-slate-400">
-      登录中...
+    <div className="mx-auto max-w-md px-6 py-16 text-center text-sm text-muted-foreground">
+      {message}
     </div>
-  );
+  )
 }

@@ -1,45 +1,111 @@
-import axios from 'axios';
-import { useAuthStore } from '../store/authStore';
+import axios, {
+  type AxiosRequestConfig,
+  type InternalAxiosRequestConfig,
+} from 'axios'
+import type { ApiResponse } from '@/types/common'
+import type { AuthTokens } from '@/types/user'
 
-const apiClient = axios.create({
+const ACCESS_KEY = 'access_token'
+const REFRESH_KEY = 'refresh_token'
+
+const client = axios.create({
   baseURL: '/api/v1',
-  timeout: 10000,
-  headers: { 'Content-Type': 'application/json' },
-});
+  timeout: 15000,
+})
 
-// Request interceptor: attach access token + handle FormData
-apiClient.interceptors.request.use((config) => {
-  const token = useAuthStore.getState().accessToken;
+client.interceptors.request.use((config: InternalAxiosRequestConfig) => {
+  const token = localStorage.getItem(ACCESS_KEY)
   if (token) {
-    config.headers.Authorization = `Bearer ${token}`;
+    config.headers.set('Authorization', `Bearer ${token}`)
   }
-  // Remove Content-Type for FormData — browser sets correct multipart boundary
   if (config.data instanceof FormData) {
-    delete config.headers['Content-Type'];
+    config.headers.delete('Content-Type')
   }
-  return config;
-});
+  return config
+})
 
-// Response interceptor: handle 401, attempt token refresh
-apiClient.interceptors.response.use(
-  (response) => response,
+let refreshing: Promise<void> | null = null
+
+async function doRefresh(): Promise<void> {
+  const refresh = localStorage.getItem(REFRESH_KEY)
+  if (!refresh) throw new Error('no refresh token')
+  const res = await axios.post<ApiResponse<AuthTokens>>(
+    '/api/v1/auth/refresh',
+    { refresh_token: refresh },
+  )
+  const data = res.data.data
+  localStorage.setItem(ACCESS_KEY, data.access_token)
+  localStorage.setItem(REFRESH_KEY, data.refresh_token)
+}
+
+client.interceptors.response.use(
+  (res) => res,
   async (error) => {
-    const originalRequest = error.config;
-    if (error.response?.status === 401 && !originalRequest._retry) {
-      originalRequest._retry = true;
+    const original = error.config as InternalAxiosRequestConfig & {
+      _retry?: boolean
+    }
+    const isAuthCall = original.url?.includes('/auth/')
+    if (error.response?.status === 401 && !original._retry && !isAuthCall) {
+      original._retry = true
       try {
-        await useAuthStore.getState().refreshSession();
-        const token = useAuthStore.getState().accessToken;
-        if (token) {
-          originalRequest.headers.Authorization = `Bearer ${token}`;
-          return apiClient(originalRequest);
+        if (!refreshing) {
+          refreshing = doRefresh().finally(() => {
+            refreshing = null
+          })
         }
+        await refreshing
+        return client(original)
       } catch {
-        useAuthStore.getState().logout();
+        localStorage.removeItem(ACCESS_KEY)
+        localStorage.removeItem(REFRESH_KEY)
       }
     }
-    return Promise.reject(error);
+    return Promise.reject(error)
   },
-);
+)
 
-export default apiClient;
+export async function apiGet<T>(
+  url: string,
+  config?: AxiosRequestConfig,
+): Promise<T> {
+  const res = await client.get<ApiResponse<T>>(url, config)
+  return res.data.data
+}
+
+export async function apiPost<T>(
+  url: string,
+  body?: unknown,
+  config?: AxiosRequestConfig,
+): Promise<T> {
+  const res = await client.post<ApiResponse<T>>(url, body, config)
+  return res.data.data
+}
+
+export async function apiPut<T>(
+  url: string,
+  body?: unknown,
+  config?: AxiosRequestConfig,
+): Promise<T> {
+  const res = await client.put<ApiResponse<T>>(url, body, config)
+  return res.data.data
+}
+
+export async function apiDelete<T>(
+  url: string,
+  config?: AxiosRequestConfig,
+): Promise<T> {
+  const res = await client.delete<ApiResponse<T>>(url, config)
+  return res.data.data
+}
+
+export function extractMessage(error: unknown): string {
+  if (typeof error === 'object' && error !== null && 'response' in error) {
+    const resp = (error as { response?: { data?: { message?: string } } })
+      .response
+    if (resp?.data?.message) return resp.data.message
+  }
+  if (error instanceof Error) return error.message
+  return '请求失败,请稍后重试'
+}
+
+export default client

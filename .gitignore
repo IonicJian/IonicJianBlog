@@ -43,7 +43,9 @@ backups/
 .claude/settings.local.json
 memory/
 
+blogstyle/
+
 # Chrome DevTools snapshots
 blog-*-snap.yml
 
-.claudeignore
+.claudeignore__pycache__/

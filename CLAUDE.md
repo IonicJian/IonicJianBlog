@@ -17,6 +17,7 @@ Backend: `http://localhost:8080` · Frontend: `http://localhost:5173`
 see @docs/Implementation.md for API description, db interface and funtion implementations
 see @docs/test.md for testing requirements
 see @docs/diff.md for diff
+see @docs/deployment.md for deployment, VPS, CI/CD and ops workflows
 see @docs/skills.md for available skills and their usage
 see @docs/mcp.md for MCP server tools (CodeGraph, Chrome DevTools, Context7)
 see @docs/plugins.md for plugin management
@@ -33,6 +34,14 @@ see @docs/plugins.md for plugin management
 - 正式文档写到项目的 docs/ 目录下
 - coding规则写在 rules/ 目录下
 - 用于讨论和评审的计划、方案等文档，写到项目的 discuss/ 目录下
+
+## 模型调度规则
+
+- 主模型：glm-5.2（文本任务、代码任务）
+- 子模型：deepseek-v4-flash（消耗大的具体执行任务）
+- 多模态：kimi-k2.7-code(图片、pdf等)
+- 涉及图片/PDF的任务：使用 Agent 工具，指定 model: "kimi-k2.7-code" 来处理
+- 不涉及图片的任务：直接使用当前模型执行
 
 ## Code Architecture
 

@@ -1,124 +1,130 @@
-import { useState, useRef } from 'react';
-import { useAuthStore } from '../../store/authStore';
-import { authApi } from '../../api/auth';
+import { SignOut, UserCircle } from '@phosphor-icons/react'
+import { useRef, useState, type ChangeEvent } from 'react'
+import { useNavigate } from 'react-router-dom'
+import { uploadAvatar } from '@/api/auth'
+import { extractMessage } from '@/api/client'
+import { cn } from '@/lib/utils'
+import { useAuthStore } from '@/store/authStore'
+import { toast } from 'sonner'
 
-export default function UserMenu() {
-  const user = useAuthStore(s => s.user); const logout = useAuthStore(s => s.logout);
-  const [open, setOpen] = useState(false);
-  const [uploading, setUploading] = useState(false);
-  const [uploadErr, setUploadErr] = useState('');
-  const fileRef = useRef<HTMLInputElement>(null);
-  const closeTimer = useRef<ReturnType<typeof setTimeout>>(undefined);
+export function UserMenu() {
+  const user = useAuthStore((s) => s.user)
+  const logout = useAuthStore((s) => s.logout)
+  const setUser = useAuthStore((s) => s.setUser)
+  const navigate = useNavigate()
+  const fileRef = useRef<HTMLInputElement>(null)
+  const [open, setOpen] = useState(false)
+  const hideTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
 
-  if (!user) return null;
-
-  const avatarUrl = user.avatar_url
-    ? user.avatar_url.startsWith('http')
-      ? user.avatar_url
-      : `http://localhost:8080${user.avatar_url}`
-    : null;
-
-  const handleUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    setUploadErr('');
-    setUploading(true);
-    try {
-      const formData = new FormData();
-      formData.append('avatar', file);
-      await authApi.uploadAvatar(formData);
-      // Refresh user info
-      const profileRes = await authApi.getProfile();
-      useAuthStore.getState().setUser(profileRes.data.data);
-    } catch (err: any) {
-      setUploadErr(err.response?.data?.message || '上传失败');
-    } finally {
-      setUploading(false);
+  const cancelHide = () => {
+    if (hideTimer.current) {
+      clearTimeout(hideTimer.current)
+      hideTimer.current = null
     }
-  };
+  }
+  const show = () => {
+    cancelHide()
+    setOpen(true)
+  }
+  const scheduleHide = () => {
+    cancelHide()
+    hideTimer.current = setTimeout(() => setOpen(false), 150)
+  }
 
-  const handleLogout = () => {
-    logout();
-    setOpen(false);
-  };
+  const handleAvatar = async (e: ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+    setOpen(false)
+    try {
+      const { user: updated } = await uploadAvatar(file)
+      setUser(updated)
+      toast.success('头像已更新')
+    } catch (err) {
+      toast.error(extractMessage(err))
+    }
+    e.target.value = ''
+  }
 
-  const openMenu = () => {
-    clearTimeout(closeTimer.current);
-    setOpen(true);
-  };
-  const closeMenu = () => {
-    closeTimer.current = setTimeout(() => setOpen(false), 200);
-  };
+  const initial = user?.display_name?.[0] ?? user?.username?.[0] ?? '?'
+
+  const itemClass =
+    'flex w-full items-center gap-2 rounded-md px-3 py-1.5 text-sm transition-colors'
 
   return (
-    <div className="relative" onMouseEnter={openMenu} onMouseLeave={closeMenu}>
-      {/* Trigger */}
-      <button className="flex items-center gap-2 bg-transparent border-none cursor-pointer p-0">
-        <div className="w-7 h-7 rounded-full bg-slate-200 dark:bg-slate-700 overflow-hidden flex items-center justify-center">
-          {avatarUrl ? (
-            <img src={avatarUrl} alt="" className="w-full h-full object-cover" />
-          ) : (
-            <span className="text-xs font-medium text-slate-400 dark:text-slate-400">
-              {user.display_name?.[0] || user.username?.[0] || '?'}
-            </span>
-          )}
-        </div>
-        <span className="text-sm text-slate-500 dark:text-slate-300">
-          {user.display_name || user.username}
-        </span>
+    <div className="relative" onMouseEnter={show} onMouseLeave={scheduleHide}>
+      <button
+        type="button"
+        className="ml-1 flex h-8 w-8 items-center justify-center overflow-hidden rounded-full border border-gray-950/10 outline-none transition-colors hover:bg-gray-950/5 dark:border-white/10 dark:hover:bg-white/10"
+        aria-label="用户菜单"
+      >
+        {user?.avatar_url ? (
+          <img
+            src={user.avatar_url}
+            alt={user.display_name}
+            className="h-full w-full object-cover"
+          />
+        ) : (
+          <span className="text-xs font-medium">{initial}</span>
+        )}
       </button>
-
-      {/* Hidden file input — always mounted so onChange fires */}
-      <input
-        ref={fileRef}
-        type="file"
-        accept="image/jpeg,image/png,image/gif,image/webp"
-        className="hidden"
-        onChange={handleUpload}
-      />
-
-      {/* Hover panel */}
       {open && (
-        <div className="absolute right-0 top-full mt-2 w-56 bg-white dark:bg-slate-800 rounded-lg border border-black/5 dark:border-white/5 shadow-lg z-50 p-4">
-          {/* Avatar preview */}
-          <div className="flex flex-col items-center mb-3">
-            <div className="w-16 h-16 rounded-full bg-slate-200 dark:bg-slate-700 overflow-hidden mb-2">
-              {avatarUrl ? (
-                <img src={avatarUrl} alt="" className="w-full h-full object-cover" />
-              ) : (
-                <span className="w-full h-full flex items-center justify-center text-2xl font-light text-slate-400">
-                  {user.display_name?.[0] || user.username?.[0] || '?'}
-                </span>
-              )}
-            </div>
-            <p className="text-sm font-medium text-slate-800 dark:text-slate-100">
-              {user.display_name || user.username}
+        <div className="absolute top-full right-0 z-50 mt-1 w-52 rounded-2xl bg-white p-1.5 outline outline-1 outline-gray-950/5 backdrop-blur dark:bg-gray-950 dark:outline-white/10">
+          <div className="px-3 py-2">
+            <p className="truncate text-sm font-medium text-gray-950 dark:text-white">
+              {user?.display_name || user?.username}
             </p>
-            <p className="text-xs text-slate-400 dark:text-slate-400">{user.email}</p>
+            <p className="truncate text-xs text-gray-500 dark:text-gray-400">
+              {user?.email}
+            </p>
           </div>
-
-          {uploadErr && (
-            <p className="text-xs text-red-500 mb-2 text-center">{uploadErr}</p>
-          )}
-
-          {/* Upload button */}
+          <div className="my-1 h-px bg-gray-950/5 dark:bg-white/10" />
           <button
+            type="button"
             onClick={() => fileRef.current?.click()}
-            disabled={uploading}
-            className="w-full text-xs text-center py-2 rounded-md border border-black/5 dark:border-white/10 text-slate-400 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-700 bg-transparent cursor-pointer transition-colors mb-2"
+            className={cn(
+              itemClass,
+              'text-gray-950 hover:bg-gray-950/5 dark:text-white dark:hover:bg-white/10',
+            )}
           >
-            {uploading ? '上传中...' : '更换头像'}
+            <UserCircle size={16} weight="regular" />
+            上传头像
           </button>
-
-          {/* Logout */}
+          {user?.role === 'admin' && (
+            <button
+              type="button"
+              onClick={() => {
+                setOpen(false)
+                navigate('/admin')
+              }}
+              className={cn(
+                itemClass,
+                'text-gray-950 hover:bg-gray-950/5 dark:text-white dark:hover:bg-white/10',
+              )}
+            >
+              管理面板
+            </button>
+          )}
+          <div className="my-1 h-px bg-gray-950/5 dark:bg-white/10" />
           <button
-            onClick={handleLogout}
-            className="w-full text-xs text-center py-2 rounded-md text-slate-400 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-700 bg-transparent border-none cursor-pointer transition-colors"
+            type="button"
+            onClick={() => {
+              setOpen(false)
+              logout()
+            }}
+            className={cn(itemClass, 'text-red-600 hover:bg-red-500/10')}
           >
+            <SignOut size={16} weight="regular" />
             退出登录
           </button>
         </div>
       )}
+      <input
+        ref={fileRef}
+        type="file"
+        accept="image/*"
+        className="hidden"
+        onChange={handleAvatar}
+      />
     </div>
-  );
+  )
 }

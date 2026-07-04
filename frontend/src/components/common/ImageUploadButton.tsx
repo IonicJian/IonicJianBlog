@@ -1,51 +1,55 @@
-import { useRef, useState } from 'react';
-import apiClient from '../../api/client';
+import { ImageSquare } from '@phosphor-icons/react'
+import { useRef, type ChangeEvent } from 'react'
+import { uploadImage } from '@/api/blogs'
+import { extractMessage } from '@/api/client'
+import { toast } from 'sonner'
+import { cn } from '@/lib/utils'
 
-interface Props {
-  onInsert: (markdown: string) => void;
+interface ImageUploadButtonProps {
+  onInsert: (markdown: string) => void
+  className?: string
 }
 
-export default function ImageUploadButton({ onInsert }: Props) {
-  const [uploading, setUploading] = useState(false);
-  const fileRef = useRef<HTMLInputElement>(null);
+export function ImageUploadButton({
+  onInsert,
+  className,
+}: ImageUploadButtonProps) {
+  const ref = useRef<HTMLInputElement>(null)
 
-  const handleUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    setUploading(true);
+  const handle = async (e: ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
     try {
-      const formData = new FormData();
-      formData.append('image', file);
-      const res = await apiClient.post('/upload/image', formData);
-      const url = res.data.data.url;
-      onInsert(`![](${url})`);
-    } catch {
-      // ignore
-    } finally {
-      setUploading(false);
-      // Reset so same file can be re-selected
-      if (fileRef.current) fileRef.current.value = '';
+      const { url } = await uploadImage(file)
+      onInsert(`\n\n![](${url})\n\n`)
+      toast.success('图片已插入')
+    } catch (err) {
+      toast.error(extractMessage(err))
     }
-  };
+    e.target.value = ''
+  }
 
   return (
     <>
-      <input
-        ref={fileRef}
-        type="file"
-        accept="image/jpeg,image/png,image/gif,image/webp"
-        className="hidden"
-        onChange={handleUpload}
-      />
       <button
         type="button"
-        onClick={() => fileRef.current?.click()}
-        disabled={uploading}
-        className="text-xs px-2 py-0.5 rounded border border-black/5 dark:border-white/10 bg-slate-50 dark:bg-slate-700 text-slate-500 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-600 cursor-pointer"
+        onClick={() => ref.current?.click()}
+        className={cn(
+          'inline-flex h-9 w-9 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-accent hover:text-foreground',
+          className,
+        )}
+        aria-label="上传图片"
         title="上传图片"
       >
-        {uploading ? '⏳' : '🖼'}
+        <ImageSquare size={18} weight="regular" />
       </button>
+      <input
+        ref={ref}
+        type="file"
+        accept="image/*"
+        className="hidden"
+        onChange={handle}
+      />
     </>
-  );
+  )
 }

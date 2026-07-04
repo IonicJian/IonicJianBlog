@@ -1,54 +1,57 @@
-import { Link } from 'react-router-dom';
-import type { BlogListItem } from '../../types/blog';
+import { ArrowUpRight, Eye } from '@phosphor-icons/react'
+import { Link } from 'react-router-dom'
+import { cn } from '@/lib/utils'
+import type { BlogListItem } from '@/types/blog'
 
-interface Props { blog: BlogListItem; variant?: 'glass' | 'simple'; }
+interface BlogCardProps {
+  blog: BlogListItem
+  className?: string
+}
 
-export default function BlogCard({ blog, variant = 'glass' }: Props) {
-  if (variant === 'simple') {
-    return (
-      <Link to={`/blogs/${blog.id}`} className="no-underline block group animate-fade-up">
-        <div className="flex items-start justify-between gap-8 py-5 px-6 rounded-xl border border-slate-200/60 dark:border-slate-700/40 hover:bg-slate-50/60 dark:hover:bg-slate-800/40 hover:border-slate-300 dark:hover:border-slate-600/40 transition-all duration-200">
-          <div className="flex-1 min-w-0">
-            <div className="flex items-center gap-2 mb-1.5">
-              {blog.is_top && <span className="text-[11px] text-amber-600 dark:text-amber-500 font-light border border-amber-300 dark:border-amber-700 px-1.5 py-0.5 rounded">置顶</span>}
-              {blog.category && <span className="text-[11px] text-slate-400 dark:text-slate-500 font-light">{blog.category.name}</span>}
-            </div>
-            <h3 className="text-base font-medium text-slate-800 dark:text-slate-200 mb-1 group-hover:text-amber-600 dark:group-hover:text-amber-500 transition-colors">{blog.title}</h3>
-            <p className="text-sm text-slate-400 dark:text-slate-500 font-light line-clamp-1">{blog.excerpt}</p>
-          </div>
-          <div className="flex items-center gap-3 text-[11px] text-slate-400 dark:text-slate-500 font-light flex-shrink-0 pt-0.5">
-            {blog.tags?.slice(0, 2).map(t => <span key={t.id} className="px-1.5 py-0.5 border border-slate-200/60 dark:border-slate-700/40 rounded" style={{color:t.color,fontSize:'11px'}}>{t.name}</span>)}
-            <span className="text-slate-300 dark:text-slate-700">·</span>
-            <span>{new Date(blog.created_at).toLocaleDateString('zh-CN')}</span>
-            <span className="text-slate-300 dark:text-slate-700">·</span>
-            <span>{blog.view_count} 阅读</span>
-          </div>
-        </div>
-      </Link>
-    );
-  }
+function formatDate(s: string): string {
+  return new Date(s).toLocaleDateString('zh-CN', {
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  })
+}
 
+export function BlogCard({ blog, className }: BlogCardProps) {
+  const tag = blog.tags?.[0]
   return (
-    <Link to={`/blogs/${blog.id}`} className="no-underline block group animate-fade-up">
-      <div className="glass rounded-xl p-6">
-        <div className="flex items-start justify-between gap-10">
-          <div className="flex-1 min-w-0">
-            <div className="flex items-center gap-2 mb-2">
-              {blog.is_top && <span className="text-[11px] text-amber-600 dark:text-amber-500 font-light border border-amber-300 dark:border-amber-700 px-1.5 py-0.5 rounded">置顶</span>}
-              {blog.category && <span className="text-[11px] text-slate-400 dark:text-slate-500 font-light">{blog.category.name}</span>}
-            </div>
-            <h3 className="text-base font-medium text-slate-800 dark:text-slate-200 mb-1.5 group-hover:text-amber-600 dark:group-hover:text-amber-500 transition-colors">{blog.title}</h3>
-            <p className="text-sm text-slate-400 dark:text-slate-500 font-light line-clamp-1">{blog.excerpt}</p>
-          </div>
-          <div className="flex items-center gap-3 text-[11px] text-slate-400 dark:text-slate-500 font-light flex-shrink-0 pt-0.5">
-            {blog.tags?.slice(0, 2).map(t => <span key={t.id} className="px-1.5 py-0.5 border border-black/5 dark:border-white/5 rounded" style={{color:t.color,fontSize:'11px'}}>{t.name}</span>)}
-            <span className="text-slate-300 dark:text-slate-700">·</span>
-            <span>{new Date(blog.created_at).toLocaleDateString('zh-CN')}</span>
-            <span className="text-slate-300 dark:text-slate-700">·</span>
-            <span>{blog.view_count} 阅读</span>
-          </div>
-        </div>
+    <Link
+      to={`/blogs/${blog.id}`}
+      className={cn(
+        'group isolate flex flex-col gap-3 overflow-hidden rounded-2xl bg-white p-5 outline outline-1 outline-gray-950/5 transition-colors hover:bg-gray-950/2.5 dark:bg-gray-950 dark:outline-white/10 dark:hover:bg-white/2.5',
+        className,
+      )}
+    >
+      <div className="flex items-center gap-2 text-xs text-gray-500 dark:text-gray-400">
+        {blog.is_top && (
+          <span className="font-medium text-sky-500 dark:text-sky-400">置顶</span>
+        )}
+        {tag && <span>{tag.name}</span>}
+        <span className="tabular-nums">{formatDate(blog.created_at)}</span>
+      </div>
+      <h3 className="text-lg font-semibold tracking-tight text-gray-950 text-balance transition-colors group-hover:text-sky-500 dark:text-white dark:group-hover:text-sky-400">
+        {blog.title}
+      </h3>
+      {blog.excerpt && (
+        <p className="line-clamp-2 text-sm text-gray-500 dark:text-gray-400">
+          {blog.excerpt}
+        </p>
+      )}
+      <div className="mt-auto flex items-center justify-between pt-2">
+        <span className="flex items-center gap-1 text-xs text-gray-500 tabular-nums dark:text-gray-400">
+          <Eye size={14} weight="regular" />
+          {blog.view_count}
+        </span>
+        <ArrowUpRight
+          size={16}
+          weight="regular"
+          className="text-gray-500 transition-transform group-hover:-translate-y-0.5 group-hover:translate-x-0.5 group-hover:text-sky-500 dark:text-gray-400 dark:group-hover:text-sky-400"
+        />
       </div>
     </Link>
-  );
+  )
 }

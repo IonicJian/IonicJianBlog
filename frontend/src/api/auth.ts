@@ -1,35 +1,47 @@
-import apiClient from './client';
-import type { ApiResponse } from '../types/common';
-import type { User } from '../types/user';
+import { apiGet, apiPost, apiPut } from './client'
+import type { AuthResponse, AuthTokens, User } from '@/types/user'
 
-interface AuthData {
-  user: User;
-  access_token: string;
-  refresh_token: string;
-  expires_in: number;
+export function register(username: string, email: string, password: string) {
+  return apiPost<AuthResponse>('/auth/register', { username, email, password })
 }
 
-export const authApi = {
-  register: (username: string, email: string, password: string) =>
-    apiClient.post<ApiResponse<AuthData>>('/auth/register', { username, email, password }),
+export function login(email: string, password: string) {
+  return apiPost<AuthResponse>('/auth/login', { email, password })
+}
 
-  login: (email: string, password: string) =>
-    apiClient.post<ApiResponse<AuthData>>('/auth/login', { email, password }),
+export function refresh(refresh_token: string) {
+  return apiPost<AuthTokens>('/auth/refresh', { refresh_token })
+}
 
-  refresh: (refreshToken: string) =>
-    apiClient.post<ApiResponse<{ access_token: string; refresh_token: string; expires_in: number }>>(
-      '/auth/refresh',
-      { refresh_token: refreshToken },
-    ),
+export function logout() {
+  return apiPost<null>('/auth/logout')
+}
 
-  exchangeCode: (code: string) =>
-    apiClient.post<ApiResponse<AuthData>>('/auth/exchange-code', { code }),
+export function githubLogin() {
+  window.location.href = '/api/v1/auth/github'
+}
 
-  getProfile: () => apiClient.get<ApiResponse<User>>('/users/me'),
+export function exchangeCode(code: string) {
+  return apiPost<AuthResponse>('/auth/exchange-code', { code })
+}
 
-  updateProfile: (data: { display_name?: string; bio?: string; avatar_url?: string }) =>
-    apiClient.put<ApiResponse<User>>('/users/me', data),
+export function getProfile() {
+  return apiGet<User>('/users/me')
+}
 
-  uploadAvatar: (formData: FormData) =>
-    apiClient.post<ApiResponse<{ avatar_url: string; user: User }>>('/users/me/avatar/upload', formData),
-};
+export function updateProfile(data: {
+  display_name?: string
+  bio?: string
+  avatar_url?: string
+}) {
+  return apiPut<User>('/users/me', data)
+}
+
+export function uploadAvatar(file: File) {
+  const form = new FormData()
+  form.append('avatar', file)
+  return apiPost<{ avatar_url: string; user: User }>(
+    '/users/me/avatar/upload',
+    form,
+  )
+}

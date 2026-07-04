@@ -158,6 +158,7 @@ func runMigrations(pool *pgxpool.Pool) error {
 		{"000008_create_ai_summaries_table", createAISummariesTable},
 		{"000009_enable_pg_trgm", `CREATE EXTENSION IF NOT EXISTS pg_trgm`},
 		{"000010_create_categories_table", createCategoriesTable},
+		{"000011_add_categories_parent_id", addCategoriesParentId},
 	}
 	pool.Exec(context.Background(), `CREATE TABLE IF NOT EXISTS schema_migrations (version VARCHAR(255) PRIMARY KEY, applied_at TIMESTAMPTZ NOT NULL DEFAULT NOW())`)
 	for _, m := range migrations {
@@ -184,6 +185,7 @@ const createFriendLinksTable = `CREATE TABLE IF NOT EXISTS friend_links (id SERI
 const createGuestbookTable = `CREATE TABLE IF NOT EXISTS guestbook_messages (id BIGSERIAL PRIMARY KEY, user_id BIGINT NULL REFERENCES users(id) ON DELETE SET NULL, nickname VARCHAR(128) NOT NULL DEFAULT '', content TEXT NOT NULL, is_approved BOOLEAN NOT NULL DEFAULT true, created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(), updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW());`
 const createAISummariesTable = `CREATE TABLE IF NOT EXISTS ai_summaries (id BIGSERIAL PRIMARY KEY, blog_id BIGINT NOT NULL REFERENCES blogs(id) ON DELETE CASCADE UNIQUE, summary TEXT NOT NULL, model VARCHAR(64) NOT NULL DEFAULT '', tokens_used INT NOT NULL DEFAULT 0, created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(), updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW());`
 const createCategoriesTable = `CREATE TABLE IF NOT EXISTS categories (id SERIAL PRIMARY KEY, name VARCHAR(64) NOT NULL UNIQUE, slug VARCHAR(64) NOT NULL UNIQUE, description TEXT NOT NULL DEFAULT '', sort_order INT NOT NULL DEFAULT 0, created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()); ALTER TABLE blogs ADD COLUMN IF NOT EXISTS category_id INT NULL REFERENCES categories(id) ON DELETE SET NULL;`
+const addCategoriesParentId = `ALTER TABLE categories ADD COLUMN IF NOT EXISTS parent_id INT NULL REFERENCES categories(id) ON DELETE CASCADE; CREATE INDEX IF NOT EXISTS idx_categories_parent_id ON categories(parent_id);`
 
 func seedAdmin(pool *pgxpool.Pool, email, password string) error {
 	ctx := context.Background()

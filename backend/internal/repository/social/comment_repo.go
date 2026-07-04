@@ -14,6 +14,7 @@ type CommentRepository interface {
 	GetByID(ctx context.Context, id int64) (*model.Comment, error)
 	Delete(ctx context.Context, id int64) error
 	ListByBlogID(ctx context.Context, blogID int64, page, pageSize int) ([]*model.Comment, int64, error)
+	ListAll(ctx context.Context, page, pageSize int) ([]*model.Comment, int64, error)
 }
 
 type commentRepo struct {
@@ -150,4 +151,28 @@ func (r *commentRepo) ListByBlogID(ctx context.Context, blogID int64, page, page
 	}
 
 	return topLevel, total, nil
+}
+
+func (r *commentRepo) ListAll(ctx context.Context, page, pageSize int) ([]*model.Comment, int64, error) {
+	var total int64
+	if err := r.db.QueryRow(ctx, "SELECT COUNT(*) FROM comments").Scan(&total); err != nil {
+		return nil, 0, err
+	}
+	offset := (page - 1) * pageSize
+	rows, err := r.db.Query(ctx,
+		fmt.Sprintf(`SELECT %s %s ORDER BY c.created_at DESC LIMIT $1 OFFSET $2`, commentSelectCols, commentFromJoin),
+		pageSize, offset)
+	if err != nil {
+		return nil, 0, err
+	}
+	defer rows.Close()
+	var comments []*model.Comment
+	for rows.Next() {
+		c, err := r.scanComment(rows)
+		if err != nil {
+			return nil, 0, err
+		}
+		comments = append(comments, c)
+	}
+	return comments, total, nil
 }

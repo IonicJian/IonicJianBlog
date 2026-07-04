@@ -1,76 +1,76 @@
-import { useState, useEffect } from 'react';
+import { useEffect, useState } from 'react'
+import { cn } from '@/lib/utils'
 
-interface Heading {
-  id: string;
-  text: string;
-  level: number;
+interface TocItem {
+  id: string
+  text: string
+  level: number
 }
 
-export default function TableOfContents({ content }: { content: string }) {
-  const [headings, setHeadings] = useState<Heading[]>([]);
-  const [activeId, setActiveId] = useState('');
+interface TableOfContentsProps {
+  containerRef: React.RefObject<HTMLElement | null>
+  className?: string
+}
+
+export function TableOfContents({
+  containerRef,
+  className,
+}: TableOfContentsProps) {
+  const [items, setItems] = useState<TocItem[]>([])
+  const [activeId, setActiveId] = useState('')
 
   useEffect(() => {
-    // Parse headings from markdown
-    const hds: Heading[] = [];
-    const lines = content.split('\n');
-    for (const line of lines) {
-      const match = line.match(/^(#{1,4})\s+(.+)/);
-      if (match) {
-        const level = match[1].length;
-        const text = match[2].trim();
-        const id = text.toLowerCase().replace(/[^\w一-鿿]+/g, '-').replace(/(^-|-$)/g, '');
-        hds.push({ id, text, level });
-      }
-    }
-    setHeadings(hds);
-  }, [content]);
+    const container = containerRef.current
+    if (!container) return
+    const headings = Array.from(
+      container.querySelectorAll<HTMLElement>('h1, h2, h3, h4'),
+    )
+    const toc: TocItem[] = headings
+      .map((h) => ({
+        id: h.id,
+        text: h.textContent ?? '',
+        level: Number(h.tagName[1]),
+      }))
+      .filter((h) => h.id && h.text)
+    setItems(toc)
 
-  useEffect(() => {
-    if (headings.length === 0) return;
     const observer = new IntersectionObserver(
       (entries) => {
-        for (const entry of entries) {
-          if (entry.isIntersecting) {
-            setActiveId(entry.target.id);
-          }
-        }
+        entries.forEach((entry) => {
+          if (entry.isIntersecting) setActiveId(entry.target.id)
+        })
       },
-      { rootMargin: '-80px 0px -70% 0px' }
-    );
-    for (const h of headings) {
-      const el = document.getElementById(h.id);
-      if (el) observer.observe(el);
-    }
-    return () => observer.disconnect();
-  }, [headings]);
+      { rootMargin: '0px 0px -75% 0px', threshold: 0 },
+    )
+    headings.forEach((h) => observer.observe(h))
+    return () => observer.disconnect()
+  }, [containerRef])
 
-  if (headings.length < 2) return null;
+  if (items.length < 2) return null
 
   return (
-    <nav className="text-xs">
-      <h4 className="text-[10px] font-medium tracking-[0.2em] text-slate-400 dark:text-slate-500 uppercase mb-3">目录</h4>
-      <ul className="space-y-1 border-l border-slate-200/60 dark:border-slate-700/40 pl-3">
-        {headings.map(h => (
-          <li key={h.id}>
+    <nav className={cn('flex flex-col gap-2', className)}>
+      <p className="text-xs font-semibold tracking-wider text-muted-foreground uppercase">
+        目录
+      </p>
+      <ul className="flex flex-col gap-1 border-l border-border">
+        {items.map((item) => (
+          <li key={item.id}>
             <a
-              href={`#${h.id}`}
-              onClick={(e) => {
-                e.preventDefault();
-                document.getElementById(h.id)?.scrollIntoView({ behavior: 'smooth' });
-              }}
-              className={`block py-0.5 no-underline transition-colors truncate ${
-                activeId === h.id
-                  ? 'text-amber-600 dark:text-amber-500 font-medium'
-                  : 'text-slate-400 dark:text-slate-500 hover:text-slate-600 dark:hover:text-slate-300'
-              }`}
-              style={{ paddingLeft: `${(h.level - 1) * 12}px` }}
+              href={`#${item.id}`}
+              style={{ paddingLeft: `${(item.level - 1) * 12 + 12}px` }}
+              className={cn(
+                '-ml-px block border-l border-transparent py-1 pr-2 text-xs transition-colors hover:text-foreground',
+                activeId === item.id
+                  ? 'border-primary text-primary'
+                  : 'text-muted-foreground',
+              )}
             >
-              {h.text}
+              {item.text}
             </a>
           </li>
         ))}
       </ul>
     </nav>
-  );
+  )
 }

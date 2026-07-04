@@ -1,57 +1,81 @@
-import { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
-import { useAuthStore } from '../../store/authStore';
-import { IconGitHub } from '../../components/common/Icons';
+import { GithubLogo } from '@phosphor-icons/react'
+import { useState, type FormEvent } from 'react'
+import { Link, useNavigate } from 'react-router-dom'
+import { githubLogin } from '@/api/auth'
+import { extractMessage } from '@/api/client'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+import { useAuthStore } from '@/store/authStore'
+import { toast } from 'sonner'
 
-export default function LoginPage() {
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [error, setError] = useState('');
-  const [loading, setLoading] = useState(false);
-  const login = useAuthStore((s) => s.login);
-  const navigate = useNavigate();
+export function LoginPage() {
+  const navigate = useNavigate()
+  const login = useAuthStore((s) => s.login)
+  const [email, setEmail] = useState('')
+  const [password, setPassword] = useState('')
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState('')
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault(); setError(''); setLoading(true);
-    try { await login(email, password); navigate('/'); } catch (err: any) { setError(err.response?.data?.message || '登录失败'); } finally { setLoading(false); }
-  };
+  const submit = async (e: FormEvent<HTMLFormElement>) => {
+    e.preventDefault()
+    setLoading(true)
+    setError('')
+    try {
+      await login(email, password)
+      toast.success('登录成功')
+      navigate('/')
+    } catch (err) {
+      setError(extractMessage(err))
+    } finally {
+      setLoading(false)
+    }
+  }
 
   return (
-    <div className="min-h-[80vh] flex items-center justify-center">
-      <div className="w-full max-w-sm animate-scale-in">
-        <h1 className="font-bold text-2xl text-slate-800 dark:text-slate-100 mb-2 text-center">登录</h1>
-        <p className="text-sm text-slate-400 dark:text-slate-500 font-light mb-10 text-center">欢迎回来</p>
-
-        <form onSubmit={handleSubmit} className="glass rounded-xl p-8 space-y-5">
-          {error && <div className="bg-red-50/80 dark:bg-red-950/30 text-red-600 dark:text-red-400 px-4 py-3 rounded-xl text-xs font-light">{error}</div>}
-
-          <div>
-            <label className="block text-[10px] font-medium tracking-[0.2em] text-slate-400 uppercase mb-2">邮箱</label>
-            <input type="email" value={email} onChange={e => setEmail(e.target.value)} required className="input-underline" placeholder="you@example.com" />
-          </div>
-          <div>
-            <label className="block text-[10px] font-medium tracking-[0.2em] text-slate-400 uppercase mb-2">密码</label>
-            <input type="password" value={password} onChange={e => setPassword(e.target.value)} required className="input-underline" placeholder="········" />
-          </div>
-
-          <button type="submit" disabled={loading} className="btn-primary w-full mt-2">{loading ? '登录中...' : '登录'}</button>
-
-          <div className="flex items-center gap-3">
-            <div className="flex-1 h-px bg-black/5 dark:bg-white/5" />
-            <span className="text-xs text-slate-400 font-light">或</span>
-            <div className="flex-1 h-px bg-black/5 dark:bg-white/5" />
-          </div>
-
-          <a href="/api/v1/auth/github" className="btn-ghost w-full flex items-center justify-center gap-2 no-underline text-slate-600 dark:text-slate-300">
-            <IconGitHub className="w-4 h-4" />
-            GitHub
-          </a>
-
-          <p className="text-center text-xs text-slate-400 font-light pt-2">
-            没有账号？<Link to="/register" className="text-amber-600 dark:text-amber-500 hover:text-amber-700 underline underline-offset-4 transition-colors">注册</Link>
-          </p>
-        </form>
+    <div className="mx-auto flex min-h-[70vh] max-w-md flex-col justify-center px-6 py-12">
+      <h1 className="text-2xl font-semibold tracking-tight">登录</h1>
+      <form onSubmit={submit} className="mt-6 flex flex-col gap-4">
+        <div className="flex flex-col gap-2">
+          <Label htmlFor="email">邮箱</Label>
+          <Input
+            id="email"
+            type="email"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            required
+          />
+        </div>
+        <div className="flex flex-col gap-2">
+          <Label htmlFor="password">密码</Label>
+          <Input
+            id="password"
+            type="password"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            required
+          />
+        </div>
+        {error && <p className="text-sm text-destructive">{error}</p>}
+        <Button type="submit" disabled={loading}>
+          {loading ? '登录中...' : '登录'}
+        </Button>
+      </form>
+      <div className="my-4 flex items-center gap-3">
+        <div className="h-px flex-1 bg-border" />
+        <span className="text-xs text-muted-foreground">或</span>
+        <div className="h-px flex-1 bg-border" />
       </div>
+      <Button variant="outline" onClick={githubLogin}>
+        <GithubLogo size={16} weight="regular" />
+        GitHub 登录
+      </Button>
+      <p className="mt-6 text-center text-sm text-muted-foreground">
+        还没有账号?
+        <Link to="/register" className="px-1 text-primary underline">
+          注册
+        </Link>
+      </p>
     </div>
-  );
+  )
 }

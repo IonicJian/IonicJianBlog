@@ -95,6 +95,7 @@ func Setup(r *gin.Engine, h *Handlers, cfg *config.Config) {
 		adminRequired.POST("/categories", h.Category.Create)
 		adminRequired.PUT("/categories/:id", h.Category.Update)
 		adminRequired.DELETE("/categories/:id", h.Category.Delete)
+		adminRequired.GET("/comments", h.Comment.ListAll)
 	}
 
 	// Public + optionally authenticated routes

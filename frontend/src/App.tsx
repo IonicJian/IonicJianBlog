@@ -1,76 +1,101 @@
-import { BrowserRouter, Routes, Route } from 'react-router-dom';
-import { useEffect } from 'react';
-import Layout from './components/layout/Layout';
-import HomePage from './pages/HomePage';
-import NotFoundPage from './pages/NotFoundPage';
-import LoginPage from './pages/auth/LoginPage';
-import RegisterPage from './pages/auth/RegisterPage';
-import OAuthCallbackPage from './pages/auth/OAuthCallbackPage';
-import BlogListPage from './pages/blog/BlogListPage';
-import BlogDetailPage from './pages/blog/BlogDetailPage';
-import BlogCreatePage from './pages/blog/BlogCreatePage';
-import BlogEditPage from './pages/blog/BlogEditPage';
-import FriendLinksPage from './pages/social/FriendLinksPage';
-import GuestbookPage from './pages/social/GuestbookPage';
-import TrendingPage from './pages/social/TrendingPage';
-import { useAuthStore } from './store/authStore';
-import { useUIStore } from './store/uiStore';
+import { lazy } from 'react'
+import { Route, Routes } from 'react-router-dom'
+import { Layout } from '@/components/layout/Layout'
+import { HomePage } from '@/pages/HomePage'
+import { NotFoundPage } from '@/pages/NotFoundPage'
+import { useUIStore } from '@/store/uiStore'
+import { Toaster } from 'sonner'
 
-function App() {
-  const init = useAuthStore((s) => s.init);
-  const initTheme = useUIStore((s) => s.initTheme);
+const BlogListPage = lazy(() =>
+  import('@/pages/blog/BlogListPage').then((m) => ({ default: m.BlogListPage })),
+)
+const BlogDetailPage = lazy(() =>
+  import('@/pages/blog/BlogDetailPage').then((m) => ({ default: m.BlogDetailPage })),
+)
+const BlogCreatePage = lazy(() =>
+  import('@/pages/blog/BlogCreatePage').then((m) => ({ default: m.BlogCreatePage })),
+)
+const BlogEditPage = lazy(() =>
+  import('@/pages/blog/BlogEditPage').then((m) => ({ default: m.BlogEditPage })),
+)
+const LoginPage = lazy(() =>
+  import('@/pages/auth/LoginPage').then((m) => ({ default: m.LoginPage })),
+)
+const RegisterPage = lazy(() =>
+  import('@/pages/auth/RegisterPage').then((m) => ({ default: m.RegisterPage })),
+)
+const OAuthCallbackPage = lazy(() =>
+  import('@/pages/auth/OAuthCallbackPage').then((m) => ({ default: m.OAuthCallbackPage })),
+)
+const FriendLinksPage = lazy(() =>
+  import('@/pages/social/FriendLinksPage').then((m) => ({ default: m.FriendLinksPage })),
+)
+const TrendingPage = lazy(() =>
+  import('@/pages/social/TrendingPage').then((m) => ({ default: m.TrendingPage })),
+)
+const PhotographyPage = lazy(() =>
+  import('@/pages/social/PhotographyPage').then((m) => ({ default: m.PhotographyPage })),
+)
 
-  useEffect(() => {
-    init();
-    initTheme();
-  }, [init, initTheme]);
+const AdminLayout = lazy(() =>
+  import('@/pages/admin/AdminLayout').then((m) => ({ default: m.AdminLayout })),
+)
+const AdminDashboard = lazy(() =>
+  import('@/pages/admin/AdminDashboard').then((m) => ({ default: m.AdminDashboard })),
+)
+const AdminBlogs = lazy(() =>
+  import('@/pages/admin/AdminBlogs').then((m) => ({ default: m.AdminBlogs })),
+)
+const AdminCategories = lazy(() =>
+  import('@/pages/admin/AdminCategories').then((m) => ({ default: m.AdminCategories })),
+)
+const AdminTags = lazy(() =>
+  import('@/pages/admin/AdminTags').then((m) => ({ default: m.AdminTags })),
+)
+const AdminComments = lazy(() =>
+  import('@/pages/admin/AdminComments').then((m) => ({ default: m.AdminComments })),
+)
+const AdminGuestbook = lazy(() =>
+  import('@/pages/admin/AdminGuestbook').then((m) => ({ default: m.AdminGuestbook })),
+)
+const AdminFriendLinks = lazy(() =>
+  import('@/pages/admin/AdminFriendLinks').then((m) => ({ default: m.AdminFriendLinks })),
+)
 
-  // Scroll-triggered reveal observer
-  useEffect(() => {
-    const observer = new IntersectionObserver(
-      (entries) => {
-        entries.forEach((entry) => {
-          if (entry.isIntersecting) {
-            entry.target.classList.add('is-visible');
-          }
-        });
-      },
-      { threshold: 0.1, rootMargin: '0px 0px -40px 0px' }
-    );
-    const els = document.querySelectorAll('.reveal-on-scroll');
-    els.forEach((el) => observer.observe(el));
-    // Also observe dynamically added elements
-    const mutationObserver = new MutationObserver(() => {
-      const newEls = document.querySelectorAll('.reveal-on-scroll:not(.is-visible)');
-      newEls.forEach((el) => observer.observe(el));
-    });
-    mutationObserver.observe(document.body, { childList: true, subtree: true });
-    return () => {
-      observer.disconnect();
-      mutationObserver.disconnect();
-    };
-  }, []);
+function ThemedToaster() {
+  const theme = useUIStore((s) => s.theme)
+  return <Toaster theme={theme} position="bottom-right" />
+}
 
+export default function App() {
   return (
-    <BrowserRouter>
+    <>
       <Routes>
         <Route element={<Layout />}>
           <Route path="/" element={<HomePage />} />
           <Route path="/blogs" element={<BlogListPage />} />
           <Route path="/blogs/:id" element={<BlogDetailPage />} />
-          <Route path="/blogs/create" element={<BlogCreatePage />} />
-          <Route path="/blogs/:id/edit" element={<BlogEditPage />} />
           <Route path="/login" element={<LoginPage />} />
           <Route path="/register" element={<RegisterPage />} />
-          <Route path="/friends" element={<FriendLinksPage />} />
-          <Route path="/guestbook" element={<GuestbookPage />} />
-          <Route path="/trending" element={<TrendingPage />} />
           <Route path="/auth/callback" element={<OAuthCallbackPage />} />
+          <Route path="/friends" element={<FriendLinksPage />} />
+          <Route path="/trending" element={<TrendingPage />} />
+          <Route path="/photography" element={<PhotographyPage />} />
+          <Route path="/admin" element={<AdminLayout />}>
+            <Route index element={<AdminDashboard />} />
+            <Route path="blogs" element={<AdminBlogs />} />
+            <Route path="blogs/create" element={<BlogCreatePage />} />
+            <Route path="blogs/:id/edit" element={<BlogEditPage />} />
+            <Route path="categories" element={<AdminCategories />} />
+            <Route path="tags" element={<AdminTags />} />
+            <Route path="comments" element={<AdminComments />} />
+            <Route path="guestbook" element={<AdminGuestbook />} />
+            <Route path="friend-links" element={<AdminFriendLinks />} />
+          </Route>
           <Route path="*" element={<NotFoundPage />} />
         </Route>
       </Routes>
-    </BrowserRouter>
-  );
+      <ThemedToaster />
+    </>
+  )
 }
-
-export default App;

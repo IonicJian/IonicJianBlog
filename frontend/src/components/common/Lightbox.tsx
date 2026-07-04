@@ -1,16 +1,40 @@
-import LightboxComponent from 'yet-another-react-lightbox';
-import 'yet-another-react-lightbox/styles.css';
+import { useEffect, useState } from 'react'
+import Lightbox from 'yet-another-react-lightbox'
+import 'yet-another-react-lightbox/styles.css'
 
-interface Props { src: string; alt?: string; onClose: () => void; }
+export interface LightboxImage {
+  src: string
+  alt?: string
+}
 
-export default function Lightbox({ src, alt, onClose }: Props) {
+interface LightboxProps {
+  open: boolean
+  index: number
+  images: LightboxImage[]
+  onClose: () => void
+}
+
+export function ImageLightbox({ open, index, images, onClose }: LightboxProps) {
+  const [active, setActive] = useState(open)
+  const [activeIndex, setActiveIndex] = useState(index)
+
+  useEffect(() => setActive(open), [open])
+  useEffect(() => setActiveIndex(index), [index])
+
   return (
-    <LightboxComponent
-      open={true}
+    <Lightbox
+      open={active}
+      index={activeIndex}
       close={onClose}
-      slides={[{ src, alt }]}
-      carousel={{ finite: true }}
-      render={{ buttonPrev: () => null, buttonNext: () => null }}
+      slides={images.map((img) => ({ src: img.src, alt: img.alt }))}
+      on={{
+        click: () => onClose(),
+        view: ({ index: i }) => setActiveIndex(i),
+      }}
+      controller={{ closeOnBackdropClick: true }}
+      styles={{
+        container: { backgroundColor: 'rgba(0, 0, 0, 0.85)' },
+      }}
     />
-  );
+  )
 }
