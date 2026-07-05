@@ -118,10 +118,19 @@ func (h *Handler) RefreshToken(c *gin.Context) {
 
 func (h *Handler) Logout(c *gin.Context) { resp.Success(c, nil) }
 
+// isHTTPS reports whether the original client request was HTTPS.
+// nginx terminates TLS and forwards the scheme via X-Forwarded-Proto.
+func isHTTPS(c *gin.Context) bool {
+	if c.Request.TLS != nil {
+		return true
+	}
+	return c.GetHeader("X-Forwarded-Proto") == "https"
+}
+
 func (h *Handler) GitHubLogin(c *gin.Context) {
 	authURL, state := h.authService.GetGitHubAuthURL()
-	isProduction := h.cfg.Server.Mode == "release"
-	c.SetCookie("oauth_state", state, 600, "/", "", isProduction, true)
+	secure := isHTTPS(c)
+	c.SetCookie("oauth_state", state, 600, "/", "", secure, true)
 	c.Redirect(http.StatusTemporaryRedirect, authURL)
 }
 
