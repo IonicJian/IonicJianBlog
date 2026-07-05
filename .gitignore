@@ -40,7 +40,7 @@ backups/
 .codegraph/
 
 # Claude Code
-.claude/settings.local.json
+.claude/
 memory/
 
 blogstyle/
@@ -51,3 +51,4 @@ blog-*-snap.yml
 # Python cache & Claude Code worktrees
 __pycache__/
 .claude/worktrees/
+.claude/
