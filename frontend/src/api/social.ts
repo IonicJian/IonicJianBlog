@@ -23,7 +23,7 @@ export function deleteGuestbook(id: number) {
 }
 
 export function listFriendLinks() {
-  return apiGet<FriendLink[]>('/friend-links')
+  return apiGet<FriendLink[]>('/friend-links').then((l) => l || [])
 }
 
 export function createFriendLink(form: FriendLinkForm) {

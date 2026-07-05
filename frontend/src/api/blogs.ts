@@ -64,7 +64,7 @@ export function deleteTag(id: number) {
 }
 
 export function listCategories() {
-  return apiGet<Category[]>('/categories')
+  return apiGet<Category[]>('/categories').then((c) => c || [])
 }
 
 export function createCategory(form: CategoryForm) {
