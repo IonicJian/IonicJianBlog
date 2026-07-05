@@ -67,12 +67,18 @@ export function TrendingPage() {
                     <div className="mt-4 flex items-center gap-4 text-xs text-gray-500 tabular-nums dark:text-gray-400">
                       <span className="flex items-center gap-1">
                         <Star size={12} weight="regular" />
-                        {r.stars}
+                        {r.stars.toLocaleString()}
                       </span>
                       <span className="flex items-center gap-1">
                         <GitFork size={12} weight="regular" />
-                        {r.forks}
+                        {r.forks.toLocaleString()}
                       </span>
+                      {r.current_period_stars > 0 && (
+                        <span className="flex items-center gap-1 text-amber-600 dark:text-amber-400">
+                          <Star size={12} weight="fill" />
+                          {r.current_period_stars.toLocaleString()} this week
+                        </span>
+                      )}
                     </div>
                   </div>
                 </div>

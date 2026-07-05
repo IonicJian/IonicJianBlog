@@ -99,7 +99,7 @@ func main() {
 	refreshCtx, cancelRefresh := context.WithCancel(context.Background())
 	defer cancelRefresh()
 	go func() {
-		ticker := time.NewTicker(1 * time.Hour)
+		ticker := time.NewTicker(6 * time.Hour)
 		defer ticker.Stop()
 		for {
 			select {

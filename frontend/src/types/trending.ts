@@ -6,5 +6,5 @@ export interface TrendingRepo {
   language: string
   stars: number
   forks: number
-  today_stars: number
+  current_period_stars: number
 }
