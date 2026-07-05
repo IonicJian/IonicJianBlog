@@ -123,11 +123,11 @@ export function BlogListPage() {
     );
 
   return (
-    <div className="mx-auto max-w-7xl">
-      <div className="pointer-events-none absolute top-0 right-0 z-0 hidden w-[960px] h-[600px] overflow-hidden lg:block">
-        <Laptop />
-      </div>
-      <div className="relative mt-24 px-4 sm:px-6">
+    <div className="relative mx-auto max-w-7xl">
+      <div className="relative pt-32 px-4 sm:px-6">
+        <div className="pointer-events-none absolute top-0 right-0 z-0 hidden w-[960px] h-[600px] overflow-hidden lg:block">
+          <Laptop />
+        </div>
         <div className="relative z-10">
           <h1 className="bp-line text-6xl tracking-tighter text-balance text-gray-950 sm:text-7xl lg:text-8xl dark:text-white">
             Blogs

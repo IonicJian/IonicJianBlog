@@ -61,6 +61,9 @@ const AdminGuestbook = lazy(() =>
 const AdminFriendLinks = lazy(() =>
   import('@/pages/admin/AdminFriendLinks').then((m) => ({ default: m.AdminFriendLinks })),
 )
+const AdminPhotography = lazy(() =>
+  import('@/pages/admin/AdminPhotography').then((m) => ({ default: m.AdminPhotography })),
+)
 
 function ThemedToaster() {
   const theme = useUIStore((s) => s.theme)
@@ -91,6 +94,7 @@ export default function App() {
             <Route path="comments" element={<AdminComments />} />
             <Route path="guestbook" element={<AdminGuestbook />} />
             <Route path="friend-links" element={<AdminFriendLinks />} />
+            <Route path="photography" element={<AdminPhotography />} />
           </Route>
           <Route path="*" element={<NotFoundPage />} />
         </Route>

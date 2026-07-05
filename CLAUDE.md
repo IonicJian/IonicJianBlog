@@ -37,9 +37,9 @@ see @docs/plugins.md for plugin management
 
 ## 模型调度规则
 
-- 主模型：glm-5.2（文本任务、代码任务）
-- 子模型：deepseek-v4-flash（消耗大的具体执行任务）
-- 多模态：kimi-k2.7-code(图片、pdf等)
+- 主模型：opus（文本任务、规划任务）
+- 子模型：sonnet（具体执行、代码任务）
+- 多模态：haiku(图片、pdf等)
 - 涉及图片/PDF的任务：使用 Agent 工具，指定 model: "kimi-k2.7-code" 来处理
 - 不涉及图片的任务：直接使用当前模型执行
 

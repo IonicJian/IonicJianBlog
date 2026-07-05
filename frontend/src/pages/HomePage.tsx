@@ -2,16 +2,19 @@ import { ArrowRight, Camera } from "@phosphor-icons/react";
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { listBlogs } from "@/api/blogs";
+import { listPhotos } from "@/api/photos";
 import { getSiteOwner } from "@/api/site";
 import { BlogCard } from "@/components/common/BlogCard";
 import { Bookcase } from "@/components/decorations/Bookcase";
 import { Button } from "@/components/ui/button";
 import type { BlogListItem } from "@/types/blog";
+import type { Photo } from "@/types/photo";
 import type { User } from "@/types/user";
 
 export function HomePage() {
   const [owner, setOwner] = useState<User | null>(null);
   const [blogs, setBlogs] = useState<BlogListItem[]>([]);
+  const [photos, setPhotos] = useState<Photo[]>([]);
 
   useEffect(() => {
     let cancelled = false;
@@ -23,6 +26,11 @@ export function HomePage() {
     listBlogs({ page: 1, page_size: 6, sort: "latest" })
       .then((d) => {
         if (!cancelled) setBlogs(d.items || []);
+      })
+      .catch(() => {});
+    listPhotos()
+      .then((p) => {
+        if (!cancelled) setPhotos((p || []).slice(0, 4));
       })
       .catch(() => {});
     return () => {
@@ -97,15 +105,29 @@ export function HomePage() {
             </Link>
           </div>
           <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
-            {[0, 1, 2, 3].map((i) => (
-              <Link
-                key={i}
-                to="/photography"
-                className="flex aspect-square items-center justify-center rounded-2xl bg-gray-950/2 text-gray-400 outline outline-1 outline-gray-950/5 transition-colors hover:bg-gray-950/5 dark:bg-white/5 dark:outline-white/10 dark:hover:bg-white/10"
-              >
-                <Camera size={28} weight="regular" />
-              </Link>
-            ))}
+            {photos.length > 0
+              ? photos.map((p) => (
+                  <Link
+                    key={p.id}
+                    to="/photography"
+                    className="overflow-hidden rounded-2xl outline outline-1 outline-gray-950/5 transition-colors hover:opacity-80 dark:outline-white/10"
+                  >
+                    <img
+                      src={p.url}
+                      alt={p.title || ""}
+                      className="aspect-square w-full object-cover"
+                    />
+                  </Link>
+                ))
+              : [0, 1, 2, 3].map((i) => (
+                  <Link
+                    key={i}
+                    to="/photography"
+                    className="flex aspect-square items-center justify-center rounded-2xl bg-gray-950/2 text-gray-400 outline outline-1 outline-gray-950/5 transition-colors hover:bg-gray-950/5 dark:bg-white/5 dark:outline-white/10 dark:hover:bg-white/10"
+                  >
+                    <Camera size={28} weight="regular" />
+                  </Link>
+                ))}
           </div>
         </div>
       </section>

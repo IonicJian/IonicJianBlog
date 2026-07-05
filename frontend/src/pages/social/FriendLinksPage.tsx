@@ -26,7 +26,7 @@ export function FriendLinksPage() {
 
   return (
     <div className="mx-auto max-w-7xl">
-      <div className="mt-24 px-4 sm:px-6">
+      <div className="pt-32 px-4 sm:px-6">
         <h1 className="bp-line text-6xl tracking-tighter text-balance text-gray-950 sm:text-7xl lg:text-8xl dark:text-white">
           Friend Links
         </h1>
