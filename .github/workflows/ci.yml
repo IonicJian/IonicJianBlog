@@ -96,6 +96,7 @@ jobs:
           script: |
             set -e
             cd /opt/deploy
+            rm -rf backend frontend docker-compose.yml
             tar -xzf /tmp/deploy.tar.gz --strip-components=1 -C .
             docker compose down 2>/dev/null || true
             docker compose build --no-cache
