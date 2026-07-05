@@ -1,145 +1,147 @@
-import { ArrowLeft, Eye, PencilSimple, Quotes } from '@phosphor-icons/react'
-import { useEffect, useRef, useState } from 'react'
-import { Link, useNavigate, useParams } from 'react-router-dom'
-import { getBlog, incrementView } from '@/api/blogs'
-import { getBlogLikeStatus, toggleBlogLike } from '@/api/comments'
-import { MarkdownRenderer } from '@/components/common/MarkdownRenderer'
-import { TableOfContents } from '@/components/common/TableOfContents'
-import { CommentForm } from '@/components/comment/CommentForm'
-import { CommentList } from '@/components/comment/CommentList'
-import { LikeButton } from '@/components/like/LikeButton'
-import { Button } from '@/components/ui/button'
-import { useAuthStore } from '@/store/authStore'
-import { toast } from 'sonner'
-import type { Blog } from '@/types/blog'
-import type { Comment } from '@/types/comment'
+import { ArrowLeft, Eye, PencilSimple, Quotes } from "@phosphor-icons/react";
+import { useEffect, useRef, useState } from "react";
+import { Link, useNavigate, useParams } from "react-router-dom";
+import { getBlog, incrementView } from "@/api/blogs";
+import { getBlogLikeStatus, toggleBlogLike } from "@/api/comments";
+import { MarkdownRenderer } from "@/components/common/MarkdownRenderer";
+import { TableOfContents } from "@/components/common/TableOfContents";
+import { CommentForm } from "@/components/comment/CommentForm";
+import { CommentList } from "@/components/comment/CommentList";
+import { LikeButton } from "@/components/like/LikeButton";
+import { Button } from "@/components/ui/button";
+import { useAuthStore } from "@/store/authStore";
+import { toast } from "sonner";
+import type { Blog } from "@/types/blog";
+import type { Comment } from "@/types/comment";
 
 interface QuoteData {
-  text: string
-  start: string
+  text: string;
+  start: string;
 }
 
 interface QuoteBtn {
-  x: number
-  y: number
-  text: string
-  start: string
+  x: number;
+  y: number;
+  text: string;
+  start: string;
 }
 
 function formatDate(s: string): string {
-  return new Date(s).toLocaleDateString('zh-CN', {
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit',
-  })
+  return new Date(s).toLocaleDateString("zh-CN", {
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  });
 }
 
 export function BlogDetailPage() {
-  const { id } = useParams()
-  const navigate = useNavigate()
-  const user = useAuthStore((s) => s.user)
+  const { id } = useParams();
+  const navigate = useNavigate();
+  const user = useAuthStore((s) => s.user);
 
-  const [blog, setBlog] = useState<Blog | null>(null)
-  const [loading, setLoading] = useState(true)
-  const [liked, setLiked] = useState(false)
-  const [likeCount, setLikeCount] = useState(0)
-  const [commentRefresh, setCommentRefresh] = useState(0)
-  const [replyTo, setReplyTo] = useState<Comment | null>(null)
-  const [quote, setQuote] = useState<QuoteData | null>(null)
-  const [quoteBtn, setQuoteBtn] = useState<QuoteBtn | null>(null)
-  const articleRef = useRef<HTMLDivElement>(null)
+  const [blog, setBlog] = useState<Blog | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [liked, setLiked] = useState(false);
+  const [likeCount, setLikeCount] = useState(0);
+  const [commentRefresh, setCommentRefresh] = useState(0);
+  const [replyTo, setReplyTo] = useState<Comment | null>(null);
+  const [quote, setQuote] = useState<QuoteData | null>(null);
+  const [quoteBtn, setQuoteBtn] = useState<QuoteBtn | null>(null);
+  const articleRef = useRef<HTMLDivElement>(null);
 
-  const blogId = Number(id)
+  const blogId = Number(id);
 
   useEffect(() => {
-    if (!id) return
-    let cancelled = false
-    setLoading(true)
+    if (!id) return;
+    let cancelled = false;
+    setLoading(true);
     getBlog(blogId)
       .then((b) => {
-        if (cancelled) return
-        setBlog(b)
-        setLikeCount(b.like_count)
-        setLiked(b.liked_by_me)
+        if (cancelled) return;
+        setBlog(b);
+        setLikeCount(b.like_count);
+        setLiked(b.liked_by_me);
       })
       .finally(() => {
-        if (!cancelled) setLoading(false)
-      })
+        if (!cancelled) setLoading(false);
+      });
     return () => {
-      cancelled = true
-    }
-  }, [blogId, id])
+      cancelled = true;
+    };
+  }, [blogId, id]);
 
   useEffect(() => {
-    if (!id) return
-    const key = `blog-view-${id}`
-    if (sessionStorage.getItem(key)) return
-    sessionStorage.setItem(key, '1')
-    incrementView(blogId).catch(() => {})
-  }, [blogId, id])
+    if (!id) return;
+    const key = `blog-view-${id}`;
+    if (sessionStorage.getItem(key)) return;
+    sessionStorage.setItem(key, "1");
+    incrementView(blogId).catch(() => {});
+  }, [blogId, id]);
 
   useEffect(() => {
-    if (!id || !user) return
+    if (!id || !user) return;
     getBlogLikeStatus(blogId)
       .then((s) => {
-        setLiked(s.liked)
-        setLikeCount(s.count)
+        setLiked(s.liked);
+        setLikeCount(s.count);
       })
-      .catch(() => {})
-  }, [blogId, id, user])
+      .catch(() => {});
+  }, [blogId, id, user]);
 
   const handleLikeToggle = async () => {
     if (!user) {
-      toast.info('请先登录后再点赞')
-      throw new Error('not authenticated')
+      toast.info("请先登录后再点赞");
+      throw new Error("not authenticated");
     }
-    const res = await toggleBlogLike(blogId)
-    setLiked(res.liked)
-    setLikeCount(res.count)
-  }
+    const res = await toggleBlogLike(blogId);
+    setLiked(res.liked);
+    setLikeCount(res.count);
+  };
 
   const handleSelection = () => {
-    const sel = window.getSelection()
-    const text = sel?.toString().trim() ?? ''
+    const sel = window.getSelection();
+    const text = sel?.toString().trim() ?? "";
     if (text.length < 2) {
-      setQuoteBtn(null)
-      return
+      setQuoteBtn(null);
+      return;
     }
-    const range = sel?.getRangeAt(0)
-    if (!range) return
-    const container = range.startContainer
+    const range = sel?.getRangeAt(0);
+    if (!range) return;
+    const container = range.startContainer;
     const el =
       container.nodeType === Node.ELEMENT_NODE
         ? (container as HTMLElement)
-        : container.parentElement
-    const p = el?.closest('p[data-p-id]') ?? null
+        : container.parentElement;
+    const p = el?.closest("p[data-p-id]") ?? null;
     if (!p) {
-      setQuoteBtn(null)
-      return
+      setQuoteBtn(null);
+      return;
     }
-    const rect = range.getBoundingClientRect()
+    const rect = range.getBoundingClientRect();
     setQuoteBtn({
       x: rect.left + rect.width / 2,
       y: rect.top,
       text,
-      start: p.getAttribute('data-p-id') ?? '',
-    })
-  }
+      start: p.getAttribute("data-p-id") ?? "",
+    });
+  };
 
   const applyQuote = () => {
-    if (!quoteBtn) return
-    setQuote({ text: quoteBtn.text, start: quoteBtn.start })
-    setQuoteBtn(null)
-    window.getSelection()?.removeAllRanges()
-    document.getElementById('comment-form')?.scrollIntoView({ behavior: 'smooth' })
-  }
+    if (!quoteBtn) return;
+    setQuote({ text: quoteBtn.text, start: quoteBtn.start });
+    setQuoteBtn(null);
+    window.getSelection()?.removeAllRanges();
+    document
+      .getElementById("comment-form")
+      ?.scrollIntoView({ behavior: "smooth" });
+  };
 
   if (loading) {
     return (
       <div className="mx-auto max-w-3xl px-6 py-12 text-sm text-muted-foreground md:px-12">
         加载中...
       </div>
-    )
+    );
   }
   if (!blog) {
     return (
@@ -149,7 +151,7 @@ export function BlogDetailPage() {
           <Link to="/blogs">返回列表</Link>
         </Button>
       </div>
-    )
+    );
   }
 
   return (
@@ -174,7 +176,7 @@ export function BlogDetailPage() {
               <ArrowLeft size={16} weight="regular" />
               返回
             </button>
-            {user?.role === 'admin' && (
+            {user?.role === "admin" && (
               <Button asChild variant="outline" size="sm">
                 <Link to={`/admin/blogs/${blog.id}/edit`}>
                   <PencilSimple size={14} weight="regular" />
@@ -233,8 +235,10 @@ export function BlogDetailPage() {
           blogId={blog.id}
           refreshKey={commentRefresh}
           onReply={(c) => {
-            setReplyTo(c)
-            document.getElementById('comment-form')?.scrollIntoView({ behavior: 'smooth' })
+            setReplyTo(c);
+            document
+              .getElementById("comment-form")
+              ?.scrollIntoView({ behavior: "smooth" });
           }}
           onChanged={() => setCommentRefresh((k) => k + 1)}
         />
@@ -252,5 +256,5 @@ export function BlogDetailPage() {
         </button>
       )}
     </div>
-  )
+  );
 }

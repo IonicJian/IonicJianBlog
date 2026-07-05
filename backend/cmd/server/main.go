@@ -81,6 +81,7 @@ func main() {
 	friendLinkRepo := contentR.NewFriendLinkRepository(dbPool)
 	guestbookRepo := socialR.NewGuestbookRepository(dbPool)
 	categoryRepo := contentR.NewCategoryRepository(dbPool)
+	photoRepo := contentR.NewPhotoRepository(dbPool)
 
 	// Services
 	authService := authS.New(userRepo, cfg)
@@ -92,6 +93,7 @@ func main() {
 	guestbookService := socialS.NewGuestbookService(guestbookRepo)
 	trendingService := trendingS.New()
 	categoryService := contentS.NewCategoryService(categoryRepo)
+	photoService := contentS.NewPhotoService(photoRepo)
 
 	// Graceful refresh for trending
 	refreshCtx, cancelRefresh := context.WithCancel(context.Background())
@@ -120,6 +122,7 @@ func main() {
 		Guestbook:  socialH.NewGuestbookHandler(guestbookService),
 		Trending:   trendingH.New(trendingService),
 		Category:   contentH.NewCategoryHandler(categoryService),
+		Photo:      contentH.NewPhotoHandler(photoService),
 	}
 
 	r := gin.New()
@@ -159,6 +162,7 @@ func runMigrations(pool *pgxpool.Pool) error {
 		{"000009_enable_pg_trgm", `CREATE EXTENSION IF NOT EXISTS pg_trgm`},
 		{"000010_create_categories_table", createCategoriesTable},
 		{"000011_add_categories_parent_id", addCategoriesParentId},
+		{"000012_create_photos_table", createPhotosTable},
 	}
 	pool.Exec(context.Background(), `CREATE TABLE IF NOT EXISTS schema_migrations (version VARCHAR(255) PRIMARY KEY, applied_at TIMESTAMPTZ NOT NULL DEFAULT NOW())`)
 	for _, m := range migrations {
@@ -186,6 +190,7 @@ const createGuestbookTable = `CREATE TABLE IF NOT EXISTS guestbook_messages (id 
 const createAISummariesTable = `CREATE TABLE IF NOT EXISTS ai_summaries (id BIGSERIAL PRIMARY KEY, blog_id BIGINT NOT NULL REFERENCES blogs(id) ON DELETE CASCADE UNIQUE, summary TEXT NOT NULL, model VARCHAR(64) NOT NULL DEFAULT '', tokens_used INT NOT NULL DEFAULT 0, created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(), updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW());`
 const createCategoriesTable = `CREATE TABLE IF NOT EXISTS categories (id SERIAL PRIMARY KEY, name VARCHAR(64) NOT NULL UNIQUE, slug VARCHAR(64) NOT NULL UNIQUE, description TEXT NOT NULL DEFAULT '', sort_order INT NOT NULL DEFAULT 0, created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()); ALTER TABLE blogs ADD COLUMN IF NOT EXISTS category_id INT NULL REFERENCES categories(id) ON DELETE SET NULL;`
 const addCategoriesParentId = `ALTER TABLE categories ADD COLUMN IF NOT EXISTS parent_id INT NULL REFERENCES categories(id) ON DELETE CASCADE; CREATE INDEX IF NOT EXISTS idx_categories_parent_id ON categories(parent_id);`
+const createPhotosTable = `CREATE TABLE IF NOT EXISTS photos (id BIGSERIAL PRIMARY KEY, url TEXT NOT NULL, title TEXT NOT NULL DEFAULT '', sort_order INT NOT NULL DEFAULT 0, created_at TIMESTAMPTZ NOT NULL DEFAULT NOW());`
 
 func seedAdmin(pool *pgxpool.Pool, email, password string) error {
 	ctx := context.Background()

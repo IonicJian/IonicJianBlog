@@ -18,7 +18,7 @@ export function Layout() {
   return (
     <>
       <Header />
-      <div className="grid min-h-dvh grid-cols-1 grid-rows-[1fr_auto] justify-center pt-14 [--gutter-width:2.5rem] md:grid-cols-[var(--gutter-width)_minmax(0,80rem)_var(--gutter-width)]">
+      <div className="grid min-h-dvh grid-cols-1 grid-rows-[1fr_auto] justify-center overflow-x-hidden pt-14 [--gutter-width:2.5rem] md:grid-cols-[var(--gutter-width)_minmax(0,80rem)_var(--gutter-width)]">
         <aside aria-hidden className={`${patternClass} border-r`} />
         <main className="col-start-1 md:col-start-2">
           <Suspense fallback={<PageFallback />}>

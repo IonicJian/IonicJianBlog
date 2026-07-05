@@ -11,6 +11,7 @@ const NAV = [
   { to: '/admin/comments', label: '评论' },
   { to: '/admin/guestbook', label: '留言' },
   { to: '/admin/friend-links', label: '友链' },
+  { to: '/admin/photography', label: '摄影' },
 ]
 
 export function AdminLayout() {

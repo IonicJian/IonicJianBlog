@@ -125,3 +125,11 @@ type AISummary struct {
 	CreatedAt  time.Time `json:"created_at"`
 	UpdatedAt  time.Time `json:"updated_at"`
 }
+
+type Photo struct {
+	ID        int64     `json:"id"`
+	URL       string    `json:"url"`
+	Title     string    `json:"title"`
+	SortOrder int       `json:"sort_order"`
+	CreatedAt time.Time `json:"created_at"`
+}

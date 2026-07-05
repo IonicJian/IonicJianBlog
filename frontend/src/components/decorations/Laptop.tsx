@@ -3,7 +3,7 @@ import * as React from "react";
 export function Laptop(props: React.SVGProps<SVGSVGElement>) {
   return (
     <svg
-      viewBox="0 -38 800 500"
+      viewBox="0 -14 800 500"
       fill="none"
       xmlns="http://www.w3.org/2000/svg"
       className="w-full h-full opacity-60"

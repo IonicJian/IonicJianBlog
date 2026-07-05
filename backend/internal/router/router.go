@@ -21,6 +21,7 @@ type Handlers struct {
 	Guestbook  *social.GuestbookHandler
 	Trending   *trending.Handler
 	Category   *content.CategoryHandler
+	Photo      *content.PhotoHandler
 }
 
 func Setup(r *gin.Engine, h *Handlers, cfg *config.Config) {
@@ -96,6 +97,8 @@ func Setup(r *gin.Engine, h *Handlers, cfg *config.Config) {
 		adminRequired.PUT("/categories/:id", h.Category.Update)
 		adminRequired.DELETE("/categories/:id", h.Category.Delete)
 		adminRequired.GET("/comments", h.Comment.ListAll)
+		adminRequired.POST("/photos", h.Photo.Create)
+		adminRequired.DELETE("/photos/:id", h.Photo.Delete)
 	}
 
 	// Public + optionally authenticated routes
@@ -115,5 +118,6 @@ func Setup(r *gin.Engine, h *Handlers, cfg *config.Config) {
 		optionalAuth.GET("/blogs/:id/summary", h.Trending.GetSummary)
 		optionalAuth.GET("/trending/github", h.Trending.GetGithubTrending)
 		optionalAuth.GET("/categories", h.Category.List)
+		optionalAuth.GET("/photos", h.Photo.List)
 	}
 }

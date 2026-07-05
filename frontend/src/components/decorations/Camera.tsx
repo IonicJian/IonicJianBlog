@@ -3,7 +3,7 @@ import * as React from "react";
 export function Camera(props: React.SVGProps<SVGSVGElement>) {
   return (
     <svg
-      viewBox="20 30 800 500"
+      viewBox="20 51 800 500"
       fill="none"
       xmlns="http://www.w3.org/2000/svg"
       className="w-full h-full opacity-50"
