@@ -34,7 +34,7 @@ export function BlogRow({ blog }: BlogRowProps) {
                 </span>
               </div>
               {blog.excerpt && (
-                <p className="mt-6 line-clamp-3 text-sm leading-5 text-gray-600 dark:text-gray-300 pr-8">
+                <p className="mt-6 line-clamp-3 text-sm leading-5 text-gray-600 dark:text-gray-300">
                   {blog.excerpt}
                 </p>
               )}
@@ -46,10 +46,7 @@ export function BlogRow({ blog }: BlogRowProps) {
             </div>
             <div className="mt-1 hidden w-[10rem] shrink-0 flex-col gap-0.5 lg:flex">
               {blog.tags?.map((t) => (
-                <span
-                  key={t.id}
-                  className="font-mono text-xs font-medium tracking-widest text-gray-400 "
-                >
+                <span key={t.id} className="font-mono text-xs font-medium tracking-widest text-gray-400 uppercase">
                   {t.name}
                 </span>
               ))}
