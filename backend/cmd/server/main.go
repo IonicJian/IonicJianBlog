@@ -67,6 +67,10 @@ func main() {
 	}
 	adminPassword := os.Getenv("ADMIN_PASSWORD")
 	if adminPassword == "" {
+		if cfg.Server.Mode == "release" {
+			log.Fatal().Msg("ADMIN_PASSWORD must be set when SERVER_MODE=release")
+		}
+		log.Warn().Msg("ADMIN_PASSWORD not set, using dev default — do not use in production")
 		adminPassword = "admin123"
 	}
 	if err := seedAdmin(dbPool, adminEmail, adminPassword); err != nil {
@@ -166,6 +170,7 @@ func runMigrations(pool *pgxpool.Pool) error {
 		{"000010_create_categories_table", createCategoriesTable},
 		{"000011_add_categories_parent_id", addCategoriesParentId},
 		{"000012_create_photos_table", createPhotosTable},
+		{"000013_add_refresh_token_hash", addRefreshTokenHash},
 	}
 	pool.Exec(context.Background(), `CREATE TABLE IF NOT EXISTS schema_migrations (version VARCHAR(255) PRIMARY KEY, applied_at TIMESTAMPTZ NOT NULL DEFAULT NOW())`)
 	for _, m := range migrations {
@@ -194,6 +199,7 @@ const createAISummariesTable = `CREATE TABLE IF NOT EXISTS ai_summaries (id BIGS
 const createCategoriesTable = `CREATE TABLE IF NOT EXISTS categories (id SERIAL PRIMARY KEY, name VARCHAR(64) NOT NULL UNIQUE, slug VARCHAR(64) NOT NULL UNIQUE, description TEXT NOT NULL DEFAULT '', sort_order INT NOT NULL DEFAULT 0, created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()); ALTER TABLE blogs ADD COLUMN IF NOT EXISTS category_id INT NULL REFERENCES categories(id) ON DELETE SET NULL;`
 const addCategoriesParentId = `ALTER TABLE categories ADD COLUMN IF NOT EXISTS parent_id INT NULL REFERENCES categories(id) ON DELETE CASCADE; CREATE INDEX IF NOT EXISTS idx_categories_parent_id ON categories(parent_id);`
 const createPhotosTable = `CREATE TABLE IF NOT EXISTS photos (id BIGSERIAL PRIMARY KEY, url TEXT NOT NULL, title TEXT NOT NULL DEFAULT '', sort_order INT NOT NULL DEFAULT 0, created_at TIMESTAMPTZ NOT NULL DEFAULT NOW());`
+const addRefreshTokenHash = `ALTER TABLE users ADD COLUMN IF NOT EXISTS refresh_token_hash VARCHAR(64) NOT NULL DEFAULT '';`
 
 func seedAdmin(pool *pgxpool.Pool, email, password string) error {
 	ctx := context.Background()

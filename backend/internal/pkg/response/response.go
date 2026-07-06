@@ -4,6 +4,7 @@ import (
 	"net/http"
 
 	"github.com/gin-gonic/gin"
+	"github.com/rs/zerolog/log"
 )
 
 type Response struct {
@@ -60,5 +61,11 @@ func NotFound(c *gin.Context, message string) {
 }
 
 func InternalError(c *gin.Context, message string) {
+	if gin.Mode() == gin.ReleaseMode {
+		// Don't leak internal error details (DB errors, paths, etc.) to clients.
+		log.Error().Str("detail", message).Msg("internal error")
+		Error(c, http.StatusInternalServerError, 500, "internal server error")
+		return
+	}
 	Error(c, http.StatusInternalServerError, 500, message)
 }

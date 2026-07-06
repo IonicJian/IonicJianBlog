@@ -7,6 +7,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
+	"github.com/rs/zerolog/log"
 	"github.com/zanelin/blog/internal/model"
 )
 
@@ -279,11 +280,14 @@ func (r *blogRepo) Search(ctx context.Context, query string, page, pageSize int,
 	var ids []int64
 
 	// 1. FTS with title priority
-	ftsRows, _ := r.db.Query(ctx,
+	ftsRows, err := r.db.Query(ctx,
 		`SELECT b.id, ts_rank(setweight(to_tsvector('simple',b.title),'A') || to_tsvector('simple',b.content), plainto_tsquery('simple',$1)) AS rank
 		 FROM blogs b WHERE b.status='published'
 		 AND (setweight(to_tsvector('simple',b.title),'A') || to_tsvector('simple',b.content)) @@ plainto_tsquery('simple',$1)
 		 ORDER BY rank DESC LIMIT 30`, q)
+	if err != nil {
+		log.Error().Err(err).Msg("blog search: FTS query failed")
+	}
 	if ftsRows != nil {
 		var id int64
 		var rank float64
@@ -301,16 +305,22 @@ func (r *blogRepo) Search(ctx context.Context, query string, page, pageSize int,
 	likeQ := "%" + q + "%"
 	var likeRows pgx.Rows
 	if len(ids) == 0 {
-		likeRows, _ = r.db.Query(ctx,
+		likeRows, err = r.db.Query(ctx,
 			`SELECT b.id FROM blogs b WHERE b.status='published'
 			 AND (b.title ILIKE $1 OR b.content ILIKE $1)
 			 ORDER BY CASE WHEN b.title ILIKE $1 THEN 0 ELSE 1 END, b.created_at DESC LIMIT 20`, likeQ)
+		if err != nil {
+			log.Error().Err(err).Msg("blog search: ILIKE query failed")
+		}
 	} else {
-		likeRows, _ = r.db.Query(ctx,
+		likeRows, err = r.db.Query(ctx,
 			`SELECT b.id FROM blogs b WHERE b.status='published'
 			 AND (b.title ILIKE $1 OR b.content ILIKE $1)
 			 AND b.id != ALL($2)
 			 ORDER BY CASE WHEN b.title ILIKE $1 THEN 0 ELSE 1 END, b.created_at DESC LIMIT 20`, likeQ, ids)
+		if err != nil {
+			log.Error().Err(err).Msg("blog search: ILIKE query failed")
+		}
 	}
 	if likeRows != nil {
 		var id int64

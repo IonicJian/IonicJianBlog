@@ -28,8 +28,8 @@ func (h *GuestbookHandler) List(c *gin.Context) {
 
 func (h *GuestbookHandler) Create(c *gin.Context) {
 	var req struct {
-		Nickname string `json:"nickname"`
-		Content  string `json:"content" binding:"required"`
+		Nickname string `json:"nickname" binding:"max=128"`
+		Content  string `json:"content" binding:"required,min=1,max=2000"`
 	}
 	if err := c.ShouldBindJSON(&req); err != nil { resp.BadRequest(c, err.Error()); return }
 	var userID *int64

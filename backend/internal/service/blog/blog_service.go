@@ -20,8 +20,8 @@ import (
 
 type Service interface {
 	Create(ctx context.Context, userID int64, params CreateParams) (*model.Blog, error)
-	GetByID(ctx context.Context, id int64, currentUserID *int64) (*model.Blog, error)
-	GetBySlug(ctx context.Context, slug string, currentUserID *int64) (*model.Blog, error)
+	GetByID(ctx context.Context, id int64, currentUserID *int64, role string) (*model.Blog, error)
+	GetBySlug(ctx context.Context, slug string, currentUserID *int64, role string) (*model.Blog, error)
 	Update(ctx context.Context, id int64, params UpdateParams) (*model.Blog, error)
 	Delete(ctx context.Context, id int64) error
 	List(ctx context.Context, opts blogRepo.ListOptions) ([]*model.Blog, int64, error)
@@ -29,7 +29,7 @@ type Service interface {
 	GetTop(ctx context.Context, limit int) ([]*model.Blog, error)
 	IncrementView(ctx context.Context, id int64) error
 	GenerateSummary(ctx context.Context, blogID int64) (*model.AISummary, error)
-	GetSummary(ctx context.Context, blogID int64, currentUserID *int64) (*model.AISummary, error)
+	GetSummary(ctx context.Context, blogID int64, currentUserID *int64, role string) (*model.AISummary, error)
 }
 
 type CreateParams struct {
@@ -102,20 +102,26 @@ func (s *blogService) Create(ctx context.Context, userID int64, params CreatePar
 	return blog, nil
 }
 
-func (s *blogService) GetByID(ctx context.Context, id int64, currentUserID *int64) (*model.Blog, error) {
+func (s *blogService) GetByID(ctx context.Context, id int64, currentUserID *int64, role string) (*model.Blog, error) {
 	blog, err := s.blogRepo.GetByID(ctx, id, currentUserID)
 	if err != nil {
 		return nil, err
+	}
+	if !canViewBlog(blog, currentUserID, role) {
+		return nil, ErrBlogNotFound
 	}
 	blog.Tags, _ = s.tagRepo.GetByBlogID(ctx, id)
 	s.attachAISummary(ctx, blog)
 	return blog, nil
 }
 
-func (s *blogService) GetBySlug(ctx context.Context, slug string, currentUserID *int64) (*model.Blog, error) {
+func (s *blogService) GetBySlug(ctx context.Context, slug string, currentUserID *int64, role string) (*model.Blog, error) {
 	blog, err := s.blogRepo.GetBySlug(ctx, slug, currentUserID)
 	if err != nil {
 		return nil, err
+	}
+	if !canViewBlog(blog, currentUserID, role) {
+		return nil, ErrBlogNotFound
 	}
 	blog.Tags, _ = s.tagRepo.GetByBlogID(ctx, blog.ID)
 	s.attachAISummary(ctx, blog)
@@ -199,6 +205,21 @@ func (s *blogService) GetTop(ctx context.Context, limit int) ([]*model.Blog, err
 	return s.blogRepo.GetTop(ctx, limit)
 }
 
+// ErrBlogNotFound is returned when a blog does not exist or is not visible to the caller.
+var ErrBlogNotFound = errors.New("blog not found")
+
+// canViewBlog reports whether the caller may view the given blog. Published blogs
+// are public; drafts require the caller to be the owner or an admin.
+func canViewBlog(blog *model.Blog, currentUserID *int64, role string) bool {
+	if blog.Status == "published" {
+		return true
+	}
+	if role == "admin" {
+		return true
+	}
+	return currentUserID != nil && *currentUserID == blog.UserID
+}
+
 // --- AI summary ---
 
 // generateAIExcerpt calls AI to produce a one-line excerpt; on any failure it
@@ -263,10 +284,14 @@ func (s *blogService) GenerateSummary(ctx context.Context, blogID int64) (*model
 
 // GetSummary returns the persisted AI summary for a blog, or nil if none exists.
 // It applies the same visibility check as GetByID so drafts aren't leaked.
-func (s *blogService) GetSummary(ctx context.Context, blogID int64, currentUserID *int64) (*model.AISummary, error) {
+func (s *blogService) GetSummary(ctx context.Context, blogID int64, currentUserID *int64, role string) (*model.AISummary, error) {
 	// Verify the caller can access this blog (drafts only visible to owner/admin).
-	if _, err := s.blogRepo.GetByID(ctx, blogID, currentUserID); err != nil {
+	blog, err := s.blogRepo.GetByID(ctx, blogID, currentUserID)
+	if err != nil {
 		return nil, err
+	}
+	if !canViewBlog(blog, currentUserID, role) {
+		return nil, ErrBlogNotFound
 	}
 	summary, err := s.aiSummaryRepo.GetByBlogID(ctx, blogID)
 	if err != nil {

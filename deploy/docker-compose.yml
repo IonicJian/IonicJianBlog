@@ -18,6 +18,7 @@ services:
       timeout: 5s
       retries: 5
     restart: unless-stopped
+    mem_limit: 512m
 
   backend:
     build:
@@ -45,6 +46,7 @@ services:
     volumes:
       - uploads_data:/app/uploads
     restart: unless-stopped
+    mem_limit: 512m
 
   frontend:
     build:
@@ -56,6 +58,7 @@ services:
     depends_on:
       - backend
     restart: unless-stopped
+    mem_limit: 128m
 
 volumes:
   postgres_data:

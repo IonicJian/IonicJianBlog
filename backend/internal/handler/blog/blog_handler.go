@@ -24,6 +24,9 @@ func New(blogService blogSvc.Service) *Handler { return &Handler{blogService: bl
 func (h *Handler) List(c *gin.Context) {
 	p := pagination.Parse(c)
 	status := c.DefaultQuery("status", "published")
+	if getRole(c) != "admin" {
+		status = "published"
+	}
 	sort := c.DefaultQuery("sort", "latest")
 	opts := blogRepo.ListOptions{
 		Page: p.Page, PageSize: p.PageSize, Status: status,
@@ -61,7 +64,7 @@ func (h *Handler) GetByID(c *gin.Context) {
 	id, err := strconv.ParseInt(c.Param("id"), 10, 64)
 	if err != nil { resp.BadRequest(c, "invalid id"); return }
 	currentUserID := getOptionalUserID(c)
-	blog, err := h.blogService.GetByID(c.Request.Context(), id, currentUserID)
+	blog, err := h.blogService.GetByID(c.Request.Context(), id, currentUserID, getRole(c))
 	if err != nil { resp.NotFound(c, "blog not found"); return }
 	resp.Success(c, mapper.BlogToDetailResponse(blog))
 }
@@ -69,7 +72,7 @@ func (h *Handler) GetByID(c *gin.Context) {
 func (h *Handler) GetBySlug(c *gin.Context) {
 	slug := c.Param("slug")
 	currentUserID := getOptionalUserID(c)
-	blog, err := h.blogService.GetBySlug(c.Request.Context(), slug, currentUserID)
+	blog, err := h.blogService.GetBySlug(c.Request.Context(), slug, currentUserID, getRole(c))
 	if err != nil { resp.NotFound(c, "blog not found"); return }
 	resp.Success(c, mapper.BlogToDetailResponse(blog))
 }
@@ -126,6 +129,15 @@ func getOptionalUserID(c *gin.Context) *int64 {
 	return nil
 }
 
+func getRole(c *gin.Context) string {
+	if role, exists := c.Get(middleware.ContextKeyRole); exists {
+		if r, ok := role.(string); ok {
+			return r
+		}
+	}
+	return ""
+}
+
 func (h *Handler) GenerateSummary(c *gin.Context) {
 	id, err := strconv.ParseInt(c.Param("id"), 10, 64)
 	if err != nil {
@@ -147,7 +159,7 @@ func (h *Handler) GetSummary(c *gin.Context) {
 		return
 	}
 	currentUserID := getOptionalUserID(c)
-	summary, err := h.blogService.GetSummary(c.Request.Context(), id, currentUserID)
+	summary, err := h.blogService.GetSummary(c.Request.Context(), id, currentUserID, getRole(c))
 	if err != nil {
 		resp.NotFound(c, "blog not found")
 		return

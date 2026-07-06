@@ -3,6 +3,7 @@ package middleware
 import (
 	"net/http"
 	"sync"
+	"time"
 
 	"github.com/gin-gonic/gin"
 	"golang.org/x/time/rate"
@@ -10,7 +11,7 @@ import (
 
 type visitor struct {
 	limiter  *rate.Limiter
-	lastSeen int64
+	lastSeen time.Time
 }
 
 type rateLimiter struct {
@@ -30,6 +31,9 @@ func RateLimit(maxReqs int, ratePerSec float64) gin.HandlerFunc {
 		burst:    maxReqs,
 	}
 
+	// Evict idle visitors periodically so the map doesn't grow unbounded.
+	go rl.cleanup(3 * time.Minute)
+
 	return func(c *gin.Context) {
 		ip := c.ClientIP()
 
@@ -39,6 +43,7 @@ func RateLimit(maxReqs int, ratePerSec float64) gin.HandlerFunc {
 			v = &visitor{limiter: rate.NewLimiter(rl.rateVal, rl.burst)}
 			rl.visitors[ip] = v
 		}
+		v.lastSeen = time.Now()
 		rl.mu.Unlock()
 
 		if !v.limiter.Allow() {
@@ -49,5 +54,21 @@ func RateLimit(maxReqs int, ratePerSec float64) gin.HandlerFunc {
 			return
 		}
 		c.Next()
+	}
+}
+
+// cleanup periodically removes visitors not seen within the idle window.
+func (rl *rateLimiter) cleanup(idle time.Duration) {
+	ticker := time.NewTicker(time.Minute)
+	defer ticker.Stop()
+	for range ticker.C {
+		rl.mu.Lock()
+		now := time.Now()
+		for ip, v := range rl.visitors {
+			if now.Sub(v.lastSeen) > idle {
+				delete(rl.visitors, ip)
+			}
+		}
+		rl.mu.Unlock()
 	}
 }

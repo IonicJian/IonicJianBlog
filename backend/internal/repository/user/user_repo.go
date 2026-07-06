@@ -16,6 +16,9 @@ type Repository interface {
 	GetByGithubID(ctx context.Context, githubID int64) (*model.User, error)
 	Update(ctx context.Context, user *model.User) error
 	SetRole(ctx context.Context, id int64, role string) error
+	GetRefreshTokenHash(ctx context.Context, id int64) (string, error)
+	UpdateRefreshTokenHash(ctx context.Context, id int64, hash string) error
+	ClearRefreshTokenHash(ctx context.Context, id int64) error
 	GetSiteOwner(ctx context.Context) (*model.User, error)
 }
 
@@ -117,6 +120,25 @@ func (r *userRepo) Update(ctx context.Context, user *model.User) error {
 
 func (r *userRepo) SetRole(ctx context.Context, id int64, role string) error {
 	_, err := r.db.Exec(ctx, "UPDATE users SET role=$1, updated_at=NOW() WHERE id=$2", role, id)
+	return err
+}
+
+func (r *userRepo) GetRefreshTokenHash(ctx context.Context, id int64) (string, error) {
+	var hash string
+	err := r.db.QueryRow(ctx, "SELECT refresh_token_hash FROM users WHERE id=$1", id).Scan(&hash)
+	if err != nil {
+		return "", err
+	}
+	return hash, nil
+}
+
+func (r *userRepo) UpdateRefreshTokenHash(ctx context.Context, id int64, hash string) error {
+	_, err := r.db.Exec(ctx, "UPDATE users SET refresh_token_hash=$1, updated_at=NOW() WHERE id=$2", hash, id)
+	return err
+}
+
+func (r *userRepo) ClearRefreshTokenHash(ctx context.Context, id int64) error {
+	_, err := r.db.Exec(ctx, "UPDATE users SET refresh_token_hash='', updated_at=NOW() WHERE id=$1", id)
 	return err
 }
 

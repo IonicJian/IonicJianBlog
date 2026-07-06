@@ -22,8 +22,8 @@ func (h *CategoryHandler) List(c *gin.Context) {
 
 func (h *CategoryHandler) Create(c *gin.Context) {
 	var req struct {
-		Name        string `json:"name" binding:"required"`
-		Description string `json:"description"`
+		Name        string `json:"name" binding:"required,max=64"`
+		Description string `json:"description" binding:"max=500"`
 		SortOrder   int    `json:"sort_order"`
 		ParentID    *int64 `json:"parent_id"`
 	}

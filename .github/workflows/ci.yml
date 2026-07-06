@@ -98,9 +98,8 @@ jobs:
             cd /opt/deploy
             rm -rf backend frontend docker-compose.yml
             tar -xzf /tmp/deploy.tar.gz --strip-components=1 -C .
-            docker compose down 2>/dev/null || true
-            docker compose build --no-cache
-            docker compose up -d
+            docker compose build --no-cache backend frontend
+            docker compose up -d --force-recreate backend frontend
             docker image prune -f
             for i in $(seq 1 20); do
               sleep 5

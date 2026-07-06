@@ -27,8 +27,8 @@ func (h *TagHandler) List(c *gin.Context) {
 
 func (h *TagHandler) Create(c *gin.Context) {
 	var req struct {
-		Name  string `json:"name" binding:"required"`
-		Color string `json:"color"`
+		Name  string `json:"name" binding:"required,max=64"`
+		Color string `json:"color" binding:"max=7"`
 	}
 	if err := c.ShouldBindJSON(&req); err != nil { resp.BadRequest(c, err.Error()); return }
 	tag, err := h.service.Create(c.Request.Context(), req.Name, req.Color)

@@ -22,10 +22,10 @@ func (h *FriendLinkHandler) List(c *gin.Context) {
 
 func (h *FriendLinkHandler) Create(c *gin.Context) {
 	var req struct {
-		Name        string `json:"name" binding:"required"`
-		URL         string `json:"url" binding:"required"`
-		Description string `json:"description"`
-		LogoURL     string `json:"logo_url"`
+		Name        string `json:"name" binding:"required,max=128"`
+		URL         string `json:"url" binding:"required,url,max=512"`
+		Description string `json:"description" binding:"max=500"`
+		LogoURL     string `json:"logo_url" binding:"max=512"`
 		SortOrder   int    `json:"sort_order"`
 	}
 	if err := c.ShouldBindJSON(&req); err != nil { resp.BadRequest(c, err.Error()); return }

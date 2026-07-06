@@ -3,6 +3,7 @@ package auth
 import (
 	"context"
 	"crypto/rand"
+	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
 	"errors"
@@ -33,6 +34,7 @@ type Service interface {
 	Register(ctx context.Context, username, email, plainPassword string) (*model.User, *jwt.TokenPair, error)
 	Login(ctx context.Context, email, plainPassword string) (*model.User, *jwt.TokenPair, error)
 	RefreshToken(ctx context.Context, refreshToken string) (*jwt.TokenPair, error)
+	Logout(ctx context.Context, userID int64) error
 	GetUserByID(ctx context.Context, id int64) (*model.User, error)
 	GetSiteOwner(ctx context.Context) (*model.User, error)
 	UpdateProfile(ctx context.Context, id int64, displayName, bio, avatarURL string) (*model.User, error)
@@ -81,6 +83,7 @@ func (s *authService) Register(ctx context.Context, username, email, plainPasswo
 	if err != nil {
 		return nil, nil, err
 	}
+	_ = s.userRepo.UpdateRefreshTokenHash(ctx, user.ID, hashToken(tokens.RefreshToken))
 	return user, tokens, nil
 }
 
@@ -105,6 +108,7 @@ func (s *authService) Login(ctx context.Context, email, plainPassword string) (*
 	if err != nil {
 		return nil, nil, err
 	}
+	_ = s.userRepo.UpdateRefreshTokenHash(ctx, user.ID, hashToken(tokens.RefreshToken))
 	return user, tokens, nil
 }
 
@@ -116,11 +120,38 @@ func (s *authService) RefreshToken(ctx context.Context, refreshToken string) (*j
 	if claims.Subject != "refresh" {
 		return nil, ErrInvalidCredentials
 	}
+	// Verify this is the current refresh token (rotation + replay protection):
+	// a stolen old token will no longer match the stored hash after rotation.
+	storedHash, err := s.userRepo.GetRefreshTokenHash(ctx, claims.UserID)
+	if err != nil || storedHash == "" || hashToken(refreshToken) != storedHash {
+		return nil, ErrInvalidCredentials
+	}
 	user, err := s.userRepo.GetByID(ctx, claims.UserID)
 	if err != nil {
 		return nil, ErrInvalidCredentials
 	}
-	return s.generateTokens(user)
+	tokens, err := s.generateTokens(user)
+	if err != nil {
+		return nil, err
+	}
+	// Rotate: persist the new refresh token hash so the old one is invalidated.
+	if err := s.userRepo.UpdateRefreshTokenHash(ctx, user.ID, hashToken(tokens.RefreshToken)); err != nil {
+		return nil, err
+	}
+	return tokens, nil
+}
+
+// Logout revokes the user's refresh token so it can no longer be used to mint
+// new access tokens. Access tokens are short-lived (15m) and accepted until expiry.
+func (s *authService) Logout(ctx context.Context, userID int64) error {
+	return s.userRepo.ClearRefreshTokenHash(ctx, userID)
+}
+
+// hashToken returns the hex-encoded SHA-256 hash of a token, for storage
+// comparison without keeping the raw token server-side.
+func hashToken(token string) string {
+	h := sha256.Sum256([]byte(token))
+	return hex.EncodeToString(h[:])
 }
 
 func (s *authService) GetUserByID(ctx context.Context, id int64) (*model.User, error) {
@@ -216,6 +247,7 @@ func (s *authService) GitHubCallback(ctx context.Context, code, state string) (*
 	if err != nil {
 		return nil, nil, err
 	}
+	_ = s.userRepo.UpdateRefreshTokenHash(ctx, user.ID, hashToken(tokens.RefreshToken))
 	return user, tokens, nil
 }
 
