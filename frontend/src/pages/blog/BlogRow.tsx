@@ -19,7 +19,7 @@ export function BlogRow({ blog }: BlogRowProps) {
     <div className="bp-line-top px-4 pt-12 sm:px-6">
       <Link
         to={`/blogs/${blog.id}`}
-        className="group block -mx-4 border border-transparent px-4 transition-colors hover:border-gray-900 hover:bg-gray-950/[0.025] sm:-mx-6 sm:px-6 dark:hover:border-gray-100 dark:hover:bg-white/[0.025]"
+        className="group block -mx-4 border-x-0 border-y border-transparent px-4 transition-colors hover:border-gray-400 hover:bg-gray-950/[0.025] sm:-mx-6 sm:px-6 dark:hover:border-gray-600 dark:hover:bg-white/[0.025]"
       >
         <div className="lg:grid lg:grid-cols-[16.8rem_2.5rem_minmax(0,1fr)] lg:gap-0">
           <div className="font-mono text-sm font-medium tracking-widest text-gray-500 tabular-nums uppercase">
