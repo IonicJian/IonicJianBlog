@@ -156,16 +156,16 @@ export function BlogDetailPage() {
 
   return (
     <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 md:py-12">
-      <div className="grid gap-8 lg:grid-cols-[200px_1fr] lg:gap-0">
+      <div className="grid gap-8 lg:grid-cols-[280px_1fr_280px] lg:gap-0">
         <div className="hidden lg:block lg:pr-8">
           <div className="sticky top-32 max-h-[calc(100vh-10rem)] overflow-y-auto">
             <TableOfContents containerRef={articleRef} />
           </div>
         </div>
-        <div className="flex flex-col items-center">
+        <div>
           <article
             ref={articleRef}
-            className="w-full max-w-4xl px-6"
+            className="w-full px-6"
             onMouseUp={handleSelection}
           >
           <div className="flex items-center justify-between pb-6">
@@ -229,7 +229,7 @@ export function BlogDetailPage() {
             />
           </div>
         </article>
-        <section id="comments" className="mt-12 w-full max-w-4xl">
+        <section id="comments" className="mt-12 w-full">
         <h2 className="pb-6 text-2xl font-semibold tracking-tight">评论</h2>
         <div id="comment-form" className="pb-8">
           <CommentForm
@@ -254,6 +254,7 @@ export function BlogDetailPage() {
         />
       </section>
         </div>
+        <div className="hidden lg:block" />
       </div>
 
       {quoteBtn && (
