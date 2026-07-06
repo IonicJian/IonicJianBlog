@@ -1,7 +1,7 @@
-import { PencilSimple, Plus, Trash } from '@phosphor-icons/react'
+import { PencilSimple, Plus, Sparkle, Trash } from '@phosphor-icons/react'
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { deleteBlog, listBlogs } from '@/api/blogs'
+import { deleteBlog, generateBlogSummary, listBlogs } from '@/api/blogs'
 import { extractMessage } from '@/api/client'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
@@ -28,6 +28,15 @@ export function AdminBlogs() {
       await deleteBlog(id)
       toast.success('已删除')
       load()
+    } catch (e) {
+      toast.error(extractMessage(e))
+    }
+  }
+
+  const handleGenerateSummary = async (id: number) => {
+    try {
+      await generateBlogSummary(id)
+      toast.success('AI 总结已生成')
     } catch (e) {
       toast.error(extractMessage(e))
     }
@@ -88,6 +97,14 @@ export function AdminBlogs() {
                 </p>
               </div>
               <div className="flex shrink-0 gap-1">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => handleGenerateSummary(b.id)}
+                >
+                  <Sparkle size={14} weight="regular" />
+                  总结
+                </Button>
                 <Button asChild variant="ghost" size="sm">
                   <Link to={`/admin/blogs/${b.id}/edit`}>
                     <PencilSimple size={14} weight="regular" />

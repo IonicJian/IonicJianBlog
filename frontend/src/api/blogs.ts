@@ -43,6 +43,10 @@ export function deleteBlog(id: number) {
   return apiDelete<null>(`/blogs/${id}`)
 }
 
+export function generateBlogSummary(id: number) {
+  return apiPost<null>(`/blogs/${id}/summary`)
+}
+
 export function incrementView(id: number) {
   return apiPost<null>(`/blogs/${id}/view`)
 }

@@ -2,6 +2,7 @@ package blog
 
 import (
 	"context"
+	"database/sql"
 	"fmt"
 	"strings"
 
@@ -239,7 +240,8 @@ func (r *blogRepo) List(ctx context.Context, opts ListOptions) ([]*model.Blog, i
 	query := fmt.Sprintf(
 		`SELECT b.id, b.user_id, b.title, b.slug, b.excerpt, b.cover_image,
 		 b.status, b.view_count, b.is_top, b.category_id, b.created_at, b.updated_at,
-		 COALESCE((SELECT COUNT(*) FROM likes WHERE target_type='blog' AND target_id=b.id),0) AS like_count
+		 COALESCE((SELECT COUNT(*) FROM likes WHERE target_type='blog' AND target_id=b.id),0) AS like_count,
+		 (SELECT summary FROM ai_summaries WHERE blog_id=b.id) AS ai_summary
 		 FROM blogs b %s ORDER BY %s LIMIT $%d OFFSET $%d`,
 		whereClause, orderClause, argIdx, argIdx+1)
 	args = append(args, opts.PageSize, offset)
@@ -252,11 +254,15 @@ func (r *blogRepo) List(ctx context.Context, opts ListOptions) ([]*model.Blog, i
 	for rows.Next() {
 		b := &model.Blog{}
 		var catID *int64
+		var aiSummary sql.NullString
 		if err := rows.Scan(&b.ID, &b.UserID, &b.Title, &b.Slug, &b.Excerpt, &b.CoverImage,
-			&b.Status, &b.ViewCount, &b.IsTop, &catID, &b.CreatedAt, &b.UpdatedAt, &b.LikeCount); err != nil {
+			&b.Status, &b.ViewCount, &b.IsTop, &catID, &b.CreatedAt, &b.UpdatedAt, &b.LikeCount, &aiSummary); err != nil {
 			return nil, 0, err
 		}
 		b.CategoryID = catID
+		if aiSummary.Valid {
+			b.AISummary = &model.AISummary{Summary: aiSummary.String}
+		}
 		blogs = append(blogs, b)
 	}
 	return blogs, total, nil

@@ -31,9 +31,9 @@ export function BlogRow({ blog }: BlogRowProps) {
                 {blog.title}
               </Link>
             </div>
-            {blog.excerpt && (
+            {(blog.ai_summary || blog.excerpt) && (
               <p className="mt-6 line-clamp-3 leading-7 text-gray-600 dark:text-gray-300">
-                {blog.excerpt}
+                {blog.ai_summary || blog.excerpt}
               </p>
             )}
             <Link
