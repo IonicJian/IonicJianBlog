@@ -138,14 +138,14 @@ export function BlogDetailPage() {
 
   if (loading) {
     return (
-      <div className="mx-auto max-w-3xl px-6 py-12 text-sm text-muted-foreground md:px-12">
+      <div className="mx-auto max-w-4xl px-6 py-12 text-sm text-muted-foreground md:px-12">
         加载中...
       </div>
     );
   }
   if (!blog) {
     return (
-      <div className="mx-auto max-w-3xl px-6 py-12 md:px-12">
+      <div className="mx-auto max-w-4xl px-6 py-12 md:px-12">
         <p className="text-sm text-muted-foreground">文章不存在</p>
         <Button asChild variant="ghost" size="sm" className="mt-4">
           <Link to="/blogs">返回列表</Link>
@@ -156,17 +156,18 @@ export function BlogDetailPage() {
 
   return (
     <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 md:py-12">
-      <div className="grid gap-8 lg:grid-cols-[1fr_minmax(0,768px)_1fr] lg:gap-0">
-        <div className="hidden lg:block">
-          <div className="sticky top-32 ml-auto max-h-[calc(100vh-10rem)] w-[200px] overflow-y-auto pr-8">
+      <div className="grid gap-8 lg:grid-cols-[200px_1fr] lg:gap-0">
+        <div className="hidden lg:block lg:pr-8">
+          <div className="sticky top-32 max-h-[calc(100vh-10rem)] overflow-y-auto">
             <TableOfContents containerRef={articleRef} />
           </div>
         </div>
-        <article
-          ref={articleRef}
-          className="w-full px-6 lg:border-l lg:border-gray-950/5 dark:lg:border-white/10"
-          onMouseUp={handleSelection}
-        >
+        <div>
+          <article
+            ref={articleRef}
+            className="mx-auto w-full max-w-4xl px-6"
+            onMouseUp={handleSelection}
+          >
           <div className="flex items-center justify-between pb-6">
             <button
               type="button"
@@ -228,10 +229,7 @@ export function BlogDetailPage() {
             />
           </div>
         </article>
-        <div className="hidden lg:block" />
-      </div>
-
-      <section id="comments" className="mx-auto mt-12 max-w-3xl">
+        <section id="comments" className="mx-auto mt-12 max-w-4xl">
         <h2 className="pb-6 text-2xl font-semibold tracking-tight">评论</h2>
         <div id="comment-form" className="pb-8">
           <CommentForm
@@ -255,6 +253,8 @@ export function BlogDetailPage() {
           onChanged={() => setCommentRefresh((k) => k + 1)}
         />
       </section>
+        </div>
+      </div>
 
       {quoteBtn && (
         <button
