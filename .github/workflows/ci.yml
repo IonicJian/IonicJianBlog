@@ -102,5 +102,7 @@ jobs:
             docker compose build --no-cache
             docker compose up -d
             docker image prune -f
-            sleep 3
-            curl -sf http://localhost/api/v1/health && echo "Deploy OK"
+            for i in $(seq 1 20); do
+              sleep 5
+              curl -sf http://localhost/api/v1/health && echo "Deploy OK ($(($i * 5))s)" && break
+            done
