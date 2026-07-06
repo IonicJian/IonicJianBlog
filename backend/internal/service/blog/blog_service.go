@@ -220,10 +220,9 @@ func (s *blogService) GenerateSummary(ctx context.Context, blogID int64) (*model
 	if err != nil {
 		return nil, err
 	}
-	summaryText := truncateSummary(strings.TrimSpace(result.Text), 200)
 	summary := &model.AISummary{
 		BlogID:     blogID,
-		Summary:    summaryText,
+		Summary:    strings.TrimSpace(result.Text),
 		Model:      s.ai.ModelName(),
 		TokensUsed: result.TokensUsed,
 	}
@@ -297,26 +296,4 @@ func cleanExcerpt(s string) string {
 	s = strings.TrimSpace(s)
 	s = strings.Trim(s, "\"'“”‘’ \n\r\t")
 	return s
-}
-
-// truncateSummary caps text at max runes, preferring to cut at a sentence
-// boundary (。.！？!?\n) in the final third. Used as a safety net when the
-// model ignores the word limit.
-func truncateSummary(s string, max int) string {
-	runes := []rune(s)
-	if len(runes) <= max {
-		return s
-	}
-	cutAt := max
-	for i := max - 1; i > max*2/3; i-- {
-		if i >= len(runes) {
-			continue
-		}
-		switch runes[i] {
-		case '。', '．', '.', '\n', '！', '？', '!', '?':
-			cutAt = i + 1
-			return string(runes[:cutAt])
-		}
-	}
-	return string(runes[:cutAt])
 }
