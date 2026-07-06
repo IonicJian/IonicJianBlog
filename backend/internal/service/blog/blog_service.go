@@ -212,10 +212,10 @@ func (s *blogService) GenerateSummary(ctx context.Context, blogID int64) (*model
 	}
 	input := truncate(blog.Content, 8000)
 	messages := []ai.Message{
-		{Role: "system", Content: "你是博客总结助手。用2-3段话总结这篇博客，包括主题、关键点和结论。直接输出总结，不要前言。"},
+		{Role: "system", Content: "你是博客总结助手。总结这篇博客：第一段用一句话简要总结核心内容（不超过80字），空一行后用1-2段补充关键点和结论。直接输出纯文本，不要前言、不要标题、不要 markdown 符号。"},
 		{Role: "user", Content: input},
 	}
-	result, err := s.ai.Complete(ctx, messages, 800)
+	result, err := s.ai.Complete(ctx, messages, 500)
 	if err != nil {
 		return nil, err
 	}

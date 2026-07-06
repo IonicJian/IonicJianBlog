@@ -111,7 +111,7 @@ func (s *trendingService) commentRepo(repo TrendingRepo) string {
 	input := fmt.Sprintf("仓库：%s\n描述：%s\n语言：%s\n星数：%d\n本周新增：%d",
 		repo.FullName, repo.Description, repo.Language, repo.Stars, repo.CurrentPeriodStars)
 	messages := []ai.Message{
-		{Role: "system", Content: "你是 GitHub 项目解读助手。用2-3句话解读这个仓库：它做什么、为什么火。直接输出，不要前言。"},
+		{Role: "system", Content: "你是 GitHub 项目解读助手。用2-3句话解读这个仓库：它做什么、为什么火。直接输出纯文本，不要前言、不要 markdown 符号。"},
 		{Role: "user", Content: input},
 	}
 	result, err := s.ai.Complete(context.Background(), messages, 300)
@@ -131,7 +131,7 @@ func (s *trendingService) generateOverallSummary(repos []TrendingRepo) string {
 		sb.WriteString(fmt.Sprintf("- %s (%s): %s\n", r.FullName, r.Language, r.Description))
 	}
 	messages := []ai.Message{
-		{Role: "system", Content: "你是 GitHub 趋势分析助手。根据本周 trending 仓库列表，用一段话总结当前技术趋势和热点方向。直接输出，不要前言。"},
+		{Role: "system", Content: "你是 GitHub 趋势分析助手。根据本周 trending 仓库列表，总结当前技术趋势。按 2-3 个方面组织，每个方面单独一段，段落之间用空行分隔。用纯文本，不要 markdown 符号（如 **、#、- 等），不要前言。"},
 		{Role: "user", Content: sb.String()},
 	}
 	result, err := s.ai.Complete(context.Background(), messages, 500)

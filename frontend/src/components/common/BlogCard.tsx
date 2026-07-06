@@ -16,6 +16,11 @@ function formatDate(s: string): string {
   })
 }
 
+function firstParagraph(s?: string): string {
+  if (!s) return ''
+  return s.split(/\n+/)[0]?.trim() || ''
+}
+
 export function BlogCard({ blog, className }: BlogCardProps) {
   const tag = blog.tags?.[0]
   return (
@@ -36,9 +41,9 @@ export function BlogCard({ blog, className }: BlogCardProps) {
       <h3 className="text-lg font-semibold tracking-tight text-gray-950 text-balance transition-colors group-hover:text-sky-500 dark:text-white dark:group-hover:text-sky-400">
         {blog.title}
       </h3>
-      {blog.excerpt && (
+      {(firstParagraph(blog.ai_summary) || blog.excerpt) && (
         <p className="line-clamp-2 text-sm text-gray-500 dark:text-gray-400">
-          {blog.excerpt}
+          {firstParagraph(blog.ai_summary) || blog.excerpt}
         </p>
       )}
       <div className="mt-auto flex items-center justify-between pt-2">
