@@ -89,6 +89,16 @@ func (s *blogService) Create(ctx context.Context, userID int64, params CreatePar
 	}
 
 	blog.Tags, _ = s.tagRepo.GetByBlogID(ctx, blog.ID)
+
+	// Auto-generate summary asynchronously on publish.
+	go func() {
+		ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
+		defer cancel()
+		if _, err := s.GenerateSummary(ctx, blog.ID); err != nil {
+			log.Warn().Err(err).Int64("blog_id", blog.ID).Msg("auto-generate summary failed")
+		}
+	}()
+
 	return blog, nil
 }
 
@@ -148,6 +158,17 @@ func (s *blogService) Update(ctx context.Context, id int64, params UpdateParams)
 	}
 
 	blog.Tags, _ = s.tagRepo.GetByBlogID(ctx, blog.ID)
+
+	if params.Content != nil {
+		go func() {
+			ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
+			defer cancel()
+			if _, err := s.GenerateSummary(ctx, blog.ID); err != nil {
+				log.Warn().Err(err).Int64("blog_id", blog.ID).Msg("auto-generate summary failed")
+			}
+		}()
+	}
+
 	return blog, nil
 }
 
