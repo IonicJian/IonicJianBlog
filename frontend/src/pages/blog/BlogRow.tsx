@@ -32,7 +32,7 @@ export function BlogRow({ blog }: BlogRowProps) {
               </Link>
             </div>
             {blog.excerpt && (
-              <p className="mt-6 line-clamp-3 text-xs leading-5 text-gray-600 dark:text-gray-300">
+              <p className="mt-6 line-clamp-3 text-sm leading-5 text-gray-600 dark:text-gray-300">
                 {blog.excerpt}
               </p>
             )}

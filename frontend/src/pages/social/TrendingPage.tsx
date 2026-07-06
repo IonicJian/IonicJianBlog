@@ -35,7 +35,7 @@ export function TrendingPage() {
           最近热门的 GitHub 仓库。
         </p>
         {overallSummary && (
-          <div className="mt-8 rounded-xl border border-amber-500/20 bg-amber-50/50 px-5 py-4 dark:bg-amber-950/10">
+          <div className="mt-8 mx-24 bp-line rounded-xl border border-amber-500/20 bg-amber-50/50 px-5 py-4 dark:bg-amber-950/10">
             <div className="flex items-center gap-2 text-sm font-medium text-amber-700 dark:text-amber-400">
               <Sparkle size={14} weight="fill" />
               AI 趋势解读
