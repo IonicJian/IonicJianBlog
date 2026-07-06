@@ -9,6 +9,7 @@ import (
 	"unicode"
 
 	"github.com/jackc/pgx/v5"
+	"github.com/rs/zerolog/log"
 	"github.com/zanelin/blog/internal/model"
 	"github.com/zanelin/blog/internal/pkg/ai"
 	md "github.com/zanelin/blog/internal/pkg/markdown"
@@ -212,22 +213,31 @@ func (s *blogService) GenerateSummary(ctx context.Context, blogID int64) (*model
 	}
 	input := truncate(blog.Content, 8000)
 	messages := []ai.Message{
-		{Role: "system", Content: "你是博客总结助手。总结这篇博客的核心内容，严格不超过250字。直接输出纯文本，不要前言、不要标题、不要 markdown 符号。"},
+		{Role: "system", Content: "你是博客总结助手。总结这篇博客的核心内容，严格不超过200字。输出前请自行检查字数，若超过200字则精简后再输出。直接输出纯文本，不要前言、不要标题、不要 markdown 符号。"},
 		{Role: "user", Content: input},
 	}
 	result, err := s.ai.Complete(ctx, messages, 400)
 	if err != nil {
 		return nil, err
 	}
+	summaryText := truncateSummary(strings.TrimSpace(result.Text), 200)
 	summary := &model.AISummary{
 		BlogID:     blogID,
-		Summary:    strings.TrimSpace(result.Text),
+		Summary:    summaryText,
 		Model:      s.ai.ModelName(),
 		TokensUsed: result.TokensUsed,
 	}
 	if err := s.aiSummaryRepo.Upsert(ctx, summary); err != nil {
 		return nil, err
 	}
+
+	// Also regenerate the one-line excerpt so list/home stay in sync.
+	if newExcerpt := s.generateAIExcerpt(ctx, blog.Content); newExcerpt != "" && newExcerpt != blog.Excerpt {
+		if err := s.blogRepo.UpdateExcerpt(ctx, blogID, newExcerpt); err != nil {
+			log.Warn().Err(err).Int64("blog_id", blogID).Msg("failed to update excerpt")
+		}
+	}
+
 	return summary, nil
 }
 
@@ -287,4 +297,26 @@ func cleanExcerpt(s string) string {
 	s = strings.TrimSpace(s)
 	s = strings.Trim(s, "\"'“”‘’ \n\r\t")
 	return s
+}
+
+// truncateSummary caps text at max runes, preferring to cut at a sentence
+// boundary (。.！？!?\n) in the final third. Used as a safety net when the
+// model ignores the word limit.
+func truncateSummary(s string, max int) string {
+	runes := []rune(s)
+	if len(runes) <= max {
+		return s
+	}
+	cutAt := max
+	for i := max - 1; i > max*2/3; i-- {
+		if i >= len(runes) {
+			continue
+		}
+		switch runes[i] {
+		case '。', '．', '.', '\n', '！', '？', '!', '?':
+			cutAt = i + 1
+			return string(runes[:cutAt])
+		}
+	}
+	return string(runes[:cutAt])
 }

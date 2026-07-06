@@ -15,6 +15,7 @@ type Repository interface {
 	GetByID(ctx context.Context, id int64, currentUserID *int64) (*model.Blog, error)
 	GetBySlug(ctx context.Context, slug string, currentUserID *int64) (*model.Blog, error)
 	Update(ctx context.Context, blog *model.Blog, tagIDs []int64) error
+	UpdateExcerpt(ctx context.Context, id int64, excerpt string) error
 	Delete(ctx context.Context, id int64) error
 	List(ctx context.Context, opts ListOptions) ([]*model.Blog, int64, error)
 	Search(ctx context.Context, query string, page, pageSize int, currentUserID *int64) ([]*model.Blog, int64, error)
@@ -183,6 +184,11 @@ func (r *blogRepo) Update(ctx context.Context, blog *model.Blog, tagIDs []int64)
 		}
 	}
 	return tx.Commit(ctx)
+}
+
+func (r *blogRepo) UpdateExcerpt(ctx context.Context, id int64, excerpt string) error {
+	_, err := r.db.Exec(ctx, "UPDATE blogs SET excerpt=$1, updated_at=NOW() WHERE id=$2", excerpt, id)
+	return err
 }
 
 func (r *blogRepo) Delete(ctx context.Context, id int64) error {
