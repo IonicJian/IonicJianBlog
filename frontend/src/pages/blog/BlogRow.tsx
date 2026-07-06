@@ -22,17 +22,12 @@ export function BlogRow({ blog }: BlogRowProps) {
         className="group block -mx-4 border-x-0 border-y border-transparent px-4 transition-colors hover:border-gray-400 hover:bg-gray-950/[0.025] sm:-mx-6 sm:px-6 dark:hover:border-gray-600 dark:hover:bg-white/[0.025]"
       >
         <div className="lg:grid lg:grid-cols-[16.8rem_2.5rem_minmax(0,1fr)] lg:gap-0">
-          <div className="flex flex-col gap-2 font-mono text-sm font-medium tracking-widest text-gray-500 tabular-nums uppercase">
-            <span>{formatDate(blog.created_at)}</span>
-            {blog.tags && blog.tags.length > 0 && (
-              <span className="font-mono text-xs font-normal text-gray-400 normal-case tracking-normal">
-                {blog.tags.map((t) => t.name).join(' · ')}
-              </span>
-            )}
+          <div className="font-mono text-sm font-medium tracking-widest text-gray-500 tabular-nums uppercase">
+            {formatDate(blog.created_at)}
           </div>
           <div className="hidden lg:block" />
-          <div className="lg:pl-2 lg:pr-2">
-            <div className="lg:mr-[19.3rem] pl-2">
+          <div className="min-w-0 lg:flex lg:gap-4">
+            <div className="min-w-0 flex-1 pl-2">
               <div className="bp-line-top">
                 <span className="font-semibold text-gray-950 transition-colors group-hover:text-sky-500 dark:text-white">
                   {blog.title}
@@ -49,6 +44,15 @@ export function BlogRow({ blog }: BlogRowProps) {
                 className="mt-4 text-gray-500 transition-transform group-hover:translate-x-1 group-hover:text-sky-500 dark:text-gray-400"
               />
             </div>
+            {blog.tags && blog.tags.length > 0 && (
+              <div className="mt-1 hidden w-[10rem] shrink-0 flex-col gap-0.5 lg:flex">
+                {blog.tags.map((t) => (
+                  <span key={t.id} className="font-mono text-xs font-medium tracking-widest text-gray-400 uppercase">
+                    {t.name}
+                  </span>
+                ))}
+              </div>
+            )}
           </div>
         </div>
       </Link>
