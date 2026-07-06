@@ -32,7 +32,7 @@ export function PhotographyPage() {
 
   return (
     <div className="relative mx-auto max-w-7xl">
-      <div className="relative pt-32 px-4 sm:px-6">
+      <div className="relative pt-32 pb-12 px-4 sm:px-6">
         <div className="pointer-events-none absolute top-0 right-0 z-0 hidden w-[1080px] h-[675px] overflow-hidden lg:block">
           <Camera />
         </div>
