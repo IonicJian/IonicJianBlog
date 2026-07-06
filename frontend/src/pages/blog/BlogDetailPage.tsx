@@ -162,10 +162,10 @@ export function BlogDetailPage() {
             <TableOfContents containerRef={articleRef} />
           </div>
         </div>
-        <div className="lg:flex lg:justify-center">
+        <div>
           <article
             ref={articleRef}
-            className="w-full max-w-4xl px-6"
+            className="mx-auto max-w-4xl px-6"
             onMouseUp={handleSelection}
           >
           <div className="flex items-center justify-between pb-6">
@@ -229,7 +229,7 @@ export function BlogDetailPage() {
             />
           </div>
         </article>
-        <section id="comments" className="mx-auto mt-12 w-full max-w-4xl">
+        <section id="comments" className="mx-auto mt-12 max-w-4xl">
         <h2 className="pb-6 text-2xl font-semibold tracking-tight">评论</h2>
         <div id="comment-form" className="pb-8">
           <CommentForm
