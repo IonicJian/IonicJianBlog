@@ -164,7 +164,7 @@ export function BlogDetailPage() {
         </div>
         <article
           ref={articleRef}
-          className="max-w-3xl lg:border-l lg:border-gray-950/5 lg:pl-12 dark:lg:border-white/10"
+          className="mx-auto max-w-3xl lg:border-l lg:border-gray-950/5 lg:pl-12 dark:lg:border-white/10"
           onMouseUp={handleSelection}
         >
           <div className="flex items-center justify-between pb-6">
@@ -219,7 +219,7 @@ export function BlogDetailPage() {
           <div className="mt-10 border-t border-gray-950/5 pt-10 dark:border-white/10">
             <MarkdownRenderer content={blog.content} />
           </div>
-          <div className="mt-8 border-t border-border pt-6">
+          <div className="mt-8 flex justify-center border-t border-border pt-6">
             <LikeButton
               count={likeCount}
               liked={liked}
