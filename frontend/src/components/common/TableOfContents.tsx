@@ -40,7 +40,7 @@ export function TableOfContents({
           if (entry.isIntersecting) setActiveId(entry.target.id)
         })
       },
-      { rootMargin: '0px 0px -75% 0px', threshold: 0 },
+      { rootMargin: '-80px 0px -70% 0px', threshold: 0 },
     )
     headings.forEach((h) => observer.observe(h))
     return () => observer.disconnect()
