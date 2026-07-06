@@ -86,6 +86,10 @@ export function TableOfContents({
           <li key={item.id}>
             <a
               href={`#${item.id}`}
+              onClick={(e) => {
+                e.preventDefault()
+                document.getElementById(item.id)?.scrollIntoView({ behavior: 'smooth' })
+              }}
               style={{ paddingLeft: `${(item.level - 1) * 12 + 12}px` }}
               className={cn(
                 '-ml-px block border-l-2 border-transparent py-1 pr-2 text-xs transition-colors hover:text-foreground',
