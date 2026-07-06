@@ -1,6 +1,7 @@
 package trending
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -11,6 +12,8 @@ import (
 
 	"github.com/rs/zerolog/log"
 	"golang.org/x/net/html"
+
+	"github.com/zanelin/blog/internal/pkg/ai"
 )
 
 type TrendingRepo struct {
@@ -22,34 +25,47 @@ type TrendingRepo struct {
 	Stars              int    `json:"stars"`
 	Forks              int    `json:"forks"`
 	CurrentPeriodStars int    `json:"current_period_stars"`
+	AICommentary       string `json:"ai_commentary,omitempty"`
+}
+
+type TrendingResult struct {
+	Repos          []TrendingRepo `json:"repos"`
+	OverallSummary string         `json:"overall_summary"`
 }
 
 type Service interface {
-	GetTrending() []TrendingRepo
+	GetTrending() TrendingResult
 	Refresh()
 }
 
 type trendingService struct {
-	mu     sync.RWMutex
-	cache  []TrendingRepo
-	client *http.Client
+	mu             sync.RWMutex
+	cache          []TrendingRepo
+	overallSummary string
+	client         *http.Client
+	ai             *ai.Client
 }
 
-func New() Service {
+func New(aiClient *ai.Client) Service {
 	s := &trendingService{
 		client: &http.Client{Timeout: 15 * time.Second},
+		ai:     aiClient,
 	}
 	s.Refresh()
 	return s
 }
 
-func (s *trendingService) GetTrending() []TrendingRepo {
+func (s *trendingService) GetTrending() TrendingResult {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
-	if s.cache == nil {
-		return []TrendingRepo{}
+	repos := s.cache
+	if repos == nil {
+		repos = []TrendingRepo{}
 	}
-	return s.cache
+	return TrendingResult{
+		Repos:          repos,
+		OverallSummary: s.overallSummary,
+	}
 }
 
 func (s *trendingService) Refresh() {
@@ -62,10 +78,68 @@ func (s *trendingService) Refresh() {
 		log.Warn().Msg("github trending returned empty, keeping cached data")
 		return
 	}
+
+	// Generate AI commentary concurrently (non-fatal on failure)
+	s.generateCommentaries(repos)
+	overall := s.generateOverallSummary(repos)
+
 	s.mu.Lock()
 	s.cache = repos
+	s.overallSummary = overall
 	s.mu.Unlock()
 	log.Info().Int("count", len(repos)).Msg("github trending refreshed")
+}
+
+// generateCommentaries concurrently generates AI commentary for each repo.
+// Each goroutine writes to its own slice index, so no locking is needed.
+func (s *trendingService) generateCommentaries(repos []TrendingRepo) {
+	if s.ai == nil || !s.ai.Available() {
+		return
+	}
+	var wg sync.WaitGroup
+	for i := range repos {
+		wg.Add(1)
+		go func(idx int) {
+			defer wg.Done()
+			repos[idx].AICommentary = s.commentRepo(repos[idx])
+		}(i)
+	}
+	wg.Wait()
+}
+
+func (s *trendingService) commentRepo(repo TrendingRepo) string {
+	input := fmt.Sprintf("仓库：%s\n描述：%s\n语言：%s\n星数：%d\n本周新增：%d",
+		repo.FullName, repo.Description, repo.Language, repo.Stars, repo.CurrentPeriodStars)
+	messages := []ai.Message{
+		{Role: "system", Content: "你是 GitHub 项目解读助手。用2-3句话解读这个仓库：它做什么、为什么火。直接输出，不要前言。"},
+		{Role: "user", Content: input},
+	}
+	result, err := s.ai.Complete(context.Background(), messages, 300)
+	if err != nil {
+		log.Debug().Err(err).Str("repo", repo.FullName).Msg("ai commentary failed")
+		return ""
+	}
+	return strings.TrimSpace(result.Text)
+}
+
+func (s *trendingService) generateOverallSummary(repos []TrendingRepo) string {
+	if s.ai == nil || !s.ai.Available() {
+		return ""
+	}
+	var sb strings.Builder
+	for _, r := range repos {
+		sb.WriteString(fmt.Sprintf("- %s (%s): %s\n", r.FullName, r.Language, r.Description))
+	}
+	messages := []ai.Message{
+		{Role: "system", Content: "你是 GitHub 趋势分析助手。根据本周 trending 仓库列表，用一段话总结当前技术趋势和热点方向。直接输出，不要前言。"},
+		{Role: "user", Content: sb.String()},
+	}
+	result, err := s.ai.Complete(context.Background(), messages, 500)
+	if err != nil {
+		log.Debug().Err(err).Msg("ai overall summary failed")
+		return ""
+	}
+	return strings.TrimSpace(result.Text)
 }
 
 func (s *trendingService) fetchTrending() ([]TrendingRepo, error) {

@@ -23,6 +23,7 @@ export interface Blog {
   liked_by_me: boolean
   category_id?: number
   tags?: Tag[]
+  ai_summary?: string
 }
 
 export interface BlogListItem {

@@ -39,6 +39,7 @@ type Blog struct {
 	CategoryID *int64    `json:"category_id,omitempty"`
 	Category   *Category `json:"category,omitempty"`
 	Tags       []*Tag    `json:"tags,omitempty"`
+	AISummary  *AISummary `json:"ai_summary,omitempty"`
 }
 
 type Category struct {

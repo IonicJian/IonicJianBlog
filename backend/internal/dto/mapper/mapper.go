@@ -101,6 +101,9 @@ func BlogToDetailResponse(b *model.Blog) response.BlogResponse {
 			})
 		}
 	}
+	if b.AISummary != nil {
+		r.AISummary = b.AISummary.Summary
+	}
 	return r
 }
 

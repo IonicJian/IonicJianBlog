@@ -6,7 +6,7 @@ import type {
   GuestbookForm,
   GuestbookMessage,
 } from '@/types/social'
-import type { TrendingRepo } from '@/types/trending'
+import type { TrendingRepo, TrendingResult } from '@/types/trending'
 
 export function listGuestbook(page = 1, page_size = 10) {
   return apiGet<PaginatedData<GuestbookMessage>>('/guestbook', {
@@ -39,5 +39,5 @@ export function deleteFriendLink(id: number) {
 }
 
 export function getTrending() {
-  return apiGet<TrendingRepo[]>('/trending/github')
+  return apiGet<TrendingResult>('/trending/github')
 }

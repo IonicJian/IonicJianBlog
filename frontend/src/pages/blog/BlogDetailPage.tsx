@@ -1,4 +1,4 @@
-import { ArrowLeft, Eye, PencilSimple, Quotes } from "@phosphor-icons/react";
+import { ArrowLeft, Eye, PencilSimple, Quotes, Sparkle } from "@phosphor-icons/react";
 import { useEffect, useRef, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { getBlog, incrementView } from "@/api/blogs";
@@ -205,6 +205,17 @@ export function BlogDetailPage() {
               </span>
             ))}
           </div>
+          {blog.ai_summary && (
+            <div className="mt-8 rounded-xl border border-amber-500/20 bg-amber-50/50 px-5 py-4 dark:bg-amber-950/10">
+              <div className="flex items-center gap-2 text-sm font-medium text-amber-700 dark:text-amber-400">
+                <Sparkle size={14} weight="fill" />
+                AI 总结
+              </div>
+              <p className="mt-2 whitespace-pre-line text-sm leading-7 text-gray-700 dark:text-gray-300">
+                {blog.ai_summary}
+              </p>
+            </div>
+          )}
           <div className="mt-10 border-t border-gray-950/5 pt-10 dark:border-white/10">
             <MarkdownRenderer content={blog.content} />
           </div>

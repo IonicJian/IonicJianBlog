@@ -21,6 +21,7 @@ import (
 	contentH "github.com/zanelin/blog/internal/handler/content"
 	socialH "github.com/zanelin/blog/internal/handler/social"
 	trendingH "github.com/zanelin/blog/internal/handler/trending"
+	"github.com/zanelin/blog/internal/pkg/ai"
 	blogR "github.com/zanelin/blog/internal/repository/blog"
 	contentR "github.com/zanelin/blog/internal/repository/content"
 	socialR "github.com/zanelin/blog/internal/repository/social"
@@ -82,16 +83,18 @@ func main() {
 	guestbookRepo := socialR.NewGuestbookRepository(dbPool)
 	categoryRepo := contentR.NewCategoryRepository(dbPool)
 	photoRepo := contentR.NewPhotoRepository(dbPool)
+	aiSummaryRepo := contentR.NewAISummaryRepository(dbPool)
 
 	// Services
+	aiClient := ai.New(cfg.AI)
 	authService := authS.New(userRepo, cfg)
 	tagService := contentS.NewTagService(tagRepo)
-	blogService := blogS.New(blogRepo, tagRepo)
+	blogService := blogS.New(blogRepo, tagRepo, aiSummaryRepo, aiClient)
 	commentService := socialS.NewCommentService(commentRepo)
 	likeService := socialS.NewLikeService(likeRepo)
 	friendLinkService := contentS.NewFriendLinkService(friendLinkRepo)
 	guestbookService := socialS.NewGuestbookService(guestbookRepo)
-	trendingService := trendingS.New()
+	trendingService := trendingS.New(aiClient)
 	categoryService := contentS.NewCategoryService(categoryRepo)
 	photoService := contentS.NewPhotoService(photoRepo)
 

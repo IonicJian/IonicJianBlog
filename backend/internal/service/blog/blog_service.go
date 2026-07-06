@@ -9,11 +9,12 @@ import (
 	"unicode"
 
 	"github.com/jackc/pgx/v5"
-	blogRepo "github.com/zanelin/blog/internal/repository/blog"
-	tagRepo "github.com/zanelin/blog/internal/repository/content"
 	"github.com/zanelin/blog/internal/model"
+	"github.com/zanelin/blog/internal/pkg/ai"
 	md "github.com/zanelin/blog/internal/pkg/markdown"
 	"github.com/zanelin/blog/internal/pkg/slug"
+	blogRepo "github.com/zanelin/blog/internal/repository/blog"
+	contentRepo "github.com/zanelin/blog/internal/repository/content"
 )
 
 type Service interface {
@@ -26,6 +27,8 @@ type Service interface {
 	Search(ctx context.Context, query string, page, pageSize int, currentUserID *int64) ([]*model.Blog, int64, error)
 	GetTop(ctx context.Context, limit int) ([]*model.Blog, error)
 	IncrementView(ctx context.Context, id int64) error
+	GenerateSummary(ctx context.Context, blogID int64) (*model.AISummary, error)
+	GetSummary(ctx context.Context, blogID int64, currentUserID *int64) (*model.AISummary, error)
 }
 
 type CreateParams struct {
@@ -49,12 +52,14 @@ type UpdateParams struct {
 }
 
 type blogService struct {
-	blogRepo blogRepo.Repository
-	tagRepo  tagRepo.TagRepository
+	blogRepo      blogRepo.Repository
+	tagRepo       contentRepo.TagRepository
+	aiSummaryRepo contentRepo.AISummaryRepository
+	ai            *ai.Client
 }
 
-func New(blogRepo blogRepo.Repository, tagRepo tagRepo.TagRepository) Service {
-	return &blogService{blogRepo: blogRepo, tagRepo: tagRepo}
+func New(blogRepo blogRepo.Repository, tagRepo contentRepo.TagRepository, aiSummaryRepo contentRepo.AISummaryRepository, aiClient *ai.Client) Service {
+	return &blogService{blogRepo: blogRepo, tagRepo: tagRepo, aiSummaryRepo: aiSummaryRepo, ai: aiClient}
 }
 
 func (s *blogService) Create(ctx context.Context, userID int64, params CreateParams) (*model.Blog, error) {
@@ -64,7 +69,7 @@ func (s *blogService) Create(ctx context.Context, userID int64, params CreatePar
 	}
 
 	contentHTML := md.ToHTML(params.Content)
-	excerpt := generateExcerpt(params.Content)
+	excerpt := s.generateAIExcerpt(ctx, params.Content)
 
 	blog := &model.Blog{
 		UserID:      userID,
@@ -92,6 +97,7 @@ func (s *blogService) GetByID(ctx context.Context, id int64, currentUserID *int6
 		return nil, err
 	}
 	blog.Tags, _ = s.tagRepo.GetByBlogID(ctx, id)
+	s.attachAISummary(ctx, blog)
 	return blog, nil
 }
 
@@ -101,6 +107,7 @@ func (s *blogService) GetBySlug(ctx context.Context, slug string, currentUserID 
 		return nil, err
 	}
 	blog.Tags, _ = s.tagRepo.GetByBlogID(ctx, blog.ID)
+	s.attachAISummary(ctx, blog)
 	return blog, nil
 }
 
@@ -120,7 +127,7 @@ func (s *blogService) Update(ctx context.Context, id int64, params UpdateParams)
 	if params.Content != nil {
 		blog.Content = *params.Content
 		blog.ContentHTML = md.ToHTML(blog.Content)
-		blog.Excerpt = generateExcerpt(blog.Content)
+		blog.Excerpt = s.generateAIExcerpt(ctx, blog.Content)
 	}
 	if params.CoverImage != nil {
 		blog.CoverImage = *params.CoverImage
@@ -170,6 +177,88 @@ func (s *blogService) GetTop(ctx context.Context, limit int) ([]*model.Blog, err
 	return s.blogRepo.GetTop(ctx, limit)
 }
 
+// --- AI summary ---
+
+// generateAIExcerpt calls AI to produce a one-line excerpt; on any failure it
+// falls back to the deterministic truncate-based excerpt.
+func (s *blogService) generateAIExcerpt(ctx context.Context, content string) string {
+	if s.ai == nil || !s.ai.Available() {
+		return generateExcerpt(content)
+	}
+	input := truncate(content, 6000)
+	messages := []ai.Message{
+		{Role: "system", Content: "你是博客摘要助手。用一句话总结博客核心内容，不超过100字，直接输出总结，不要解释、不要引号。"},
+		{Role: "user", Content: input},
+	}
+	result, err := s.ai.Complete(ctx, messages, 200)
+	if err != nil || result.Text == "" {
+		return generateExcerpt(content)
+	}
+	summary := cleanExcerpt(result.Text)
+	if summary == "" {
+		return generateExcerpt(content)
+	}
+	return summary
+}
+
+// GenerateSummary produces a longer 2-3 paragraph summary and persists it.
+func (s *blogService) GenerateSummary(ctx context.Context, blogID int64) (*model.AISummary, error) {
+	blog, err := s.blogRepo.GetByID(ctx, blogID, nil)
+	if err != nil {
+		return nil, err
+	}
+	if s.ai == nil || !s.ai.Available() {
+		return nil, errors.New("AI service not configured")
+	}
+	input := truncate(blog.Content, 8000)
+	messages := []ai.Message{
+		{Role: "system", Content: "你是博客总结助手。用2-3段话总结这篇博客，包括主题、关键点和结论。直接输出总结，不要前言。"},
+		{Role: "user", Content: input},
+	}
+	result, err := s.ai.Complete(ctx, messages, 800)
+	if err != nil {
+		return nil, err
+	}
+	summary := &model.AISummary{
+		BlogID:     blogID,
+		Summary:    strings.TrimSpace(result.Text),
+		Model:      s.ai.ModelName(),
+		TokensUsed: result.TokensUsed,
+	}
+	if err := s.aiSummaryRepo.Upsert(ctx, summary); err != nil {
+		return nil, err
+	}
+	return summary, nil
+}
+
+// GetSummary returns the persisted AI summary for a blog, or nil if none exists.
+// It applies the same visibility check as GetByID so drafts aren't leaked.
+func (s *blogService) GetSummary(ctx context.Context, blogID int64, currentUserID *int64) (*model.AISummary, error) {
+	// Verify the caller can access this blog (drafts only visible to owner/admin).
+	if _, err := s.blogRepo.GetByID(ctx, blogID, currentUserID); err != nil {
+		return nil, err
+	}
+	summary, err := s.aiSummaryRepo.GetByBlogID(ctx, blogID)
+	if err != nil {
+		if contentRepo.IsNotFound(err) {
+			return nil, nil
+		}
+		return nil, err
+	}
+	return summary, nil
+}
+
+// attachAISummary loads the AI summary onto the blog's joined field, if any.
+func (s *blogService) attachAISummary(ctx context.Context, blog *model.Blog) {
+	if s.aiSummaryRepo == nil {
+		return
+	}
+	summary, err := s.aiSummaryRepo.GetByBlogID(ctx, blog.ID)
+	if err == nil && summary != nil {
+		blog.AISummary = summary
+	}
+}
+
 func generateExcerpt(content string) string {
 	excerpt := content
 	if len(excerpt) > 200 {
@@ -185,4 +274,17 @@ func generateExcerpt(content string) string {
 		return r
 	}, excerpt)
 	return strings.TrimSpace(excerpt)
+}
+
+func truncate(s string, n int) string {
+	if len(s) > n {
+		return s[:n]
+	}
+	return s
+}
+
+func cleanExcerpt(s string) string {
+	s = strings.TrimSpace(s)
+	s = strings.Trim(s, "\"'“”‘’ \n\r\t")
+	return s
 }

@@ -70,6 +70,7 @@ type AIConfig struct {
 	Provider string
 	APIKey   string
 	Model    string
+	BaseURL  string
 }
 
 func Load() (*Config, error) {
@@ -122,6 +123,7 @@ func Load() (*Config, error) {
 			Provider: viper.GetString("AI_PROVIDER"),
 			APIKey:   viper.GetString("AI_API_KEY"),
 			Model:    viper.GetString("AI_MODEL"),
+			BaseURL:  viper.GetString("AI_BASE_URL"),
 		},
 	}
 

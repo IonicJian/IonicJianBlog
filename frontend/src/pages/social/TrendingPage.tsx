@@ -1,17 +1,21 @@
-import { GitFork, Star } from "@phosphor-icons/react";
+import { GitFork, Sparkle, Star } from "@phosphor-icons/react";
 import { useEffect, useState } from "react";
 import { getTrending } from "@/api/social";
 import type { TrendingRepo } from "@/types/trending";
 
 export function TrendingPage() {
   const [repos, setRepos] = useState<TrendingRepo[]>([]);
+  const [overallSummary, setOverallSummary] = useState("");
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     let cancelled = false;
     getTrending()
       .then((r) => {
-        if (!cancelled) setRepos(r || []);
+        if (!cancelled) {
+          setRepos(r?.repos || []);
+          setOverallSummary(r?.overall_summary || "");
+        }
       })
       .finally(() => {
         if (!cancelled) setLoading(false);
@@ -30,6 +34,17 @@ export function TrendingPage() {
         <p className="mt-10 bp-line text-lg text-gray-500 dark:text-gray-400">
           最近热门的 GitHub 仓库。
         </p>
+        {overallSummary && (
+          <div className="mt-8 rounded-xl border border-amber-500/20 bg-amber-50/50 px-5 py-4 dark:bg-amber-950/10">
+            <div className="flex items-center gap-2 text-sm font-medium text-amber-700 dark:text-amber-400">
+              <Sparkle size={14} weight="fill" />
+              AI 趋势解读
+            </div>
+            <p className="mt-2 text-sm leading-7 text-gray-700 dark:text-gray-300">
+              {overallSummary}
+            </p>
+          </div>
+        )}
       </div>
       <div className="mt-12">
         {loading ? (
@@ -62,6 +77,11 @@ export function TrendingPage() {
                     {r.description && (
                       <p className="mt-4 line-clamp-2 leading-7 text-gray-600 dark:text-gray-300">
                         {r.description}
+                      </p>
+                    )}
+                    {r.ai_commentary && (
+                      <p className="mt-3 border-l-2 border-amber-400/40 pl-3 text-sm leading-6 text-gray-500 dark:text-gray-400">
+                        {r.ai_commentary}
                       </p>
                     )}
                     <div className="mt-4 flex items-center gap-4 text-xs text-gray-500 tabular-nums dark:text-gray-400">

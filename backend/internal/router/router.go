@@ -92,7 +92,7 @@ func Setup(r *gin.Engine, h *Handlers, cfg *config.Config) {
 		adminRequired.PUT("/friend-links/:id", h.FriendLink.Update)
 		adminRequired.DELETE("/friend-links/:id", h.FriendLink.Delete)
 
-		adminRequired.POST("/blogs/:id/summary", h.Trending.GenerateSummary)
+		adminRequired.POST("/blogs/:id/summary", h.Blog.GenerateSummary)
 		adminRequired.POST("/categories", h.Category.Create)
 		adminRequired.PUT("/categories/:id", h.Category.Update)
 		adminRequired.DELETE("/categories/:id", h.Category.Delete)
@@ -115,7 +115,7 @@ func Setup(r *gin.Engine, h *Handlers, cfg *config.Config) {
 		optionalAuth.GET("/tags", h.Tag.List)
 		optionalAuth.GET("/friend-links", h.FriendLink.List)
 		optionalAuth.GET("/guestbook", h.Guestbook.List)
-		optionalAuth.GET("/blogs/:id/summary", h.Trending.GetSummary)
+		optionalAuth.GET("/blogs/:id/summary", h.Blog.GetSummary)
 		optionalAuth.GET("/trending/github", h.Trending.GetGithubTrending)
 		optionalAuth.GET("/categories", h.Category.List)
 		optionalAuth.GET("/photos", h.Photo.List)

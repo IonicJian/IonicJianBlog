@@ -125,3 +125,32 @@ func getOptionalUserID(c *gin.Context) *int64 {
 	}
 	return nil
 }
+
+func (h *Handler) GenerateSummary(c *gin.Context) {
+	id, err := strconv.ParseInt(c.Param("id"), 10, 64)
+	if err != nil {
+		resp.BadRequest(c, "invalid id")
+		return
+	}
+	summary, err := h.blogService.GenerateSummary(c.Request.Context(), id)
+	if err != nil {
+		resp.InternalError(c, err.Error())
+		return
+	}
+	resp.Success(c, summary)
+}
+
+func (h *Handler) GetSummary(c *gin.Context) {
+	id, err := strconv.ParseInt(c.Param("id"), 10, 64)
+	if err != nil {
+		resp.BadRequest(c, "invalid id")
+		return
+	}
+	currentUserID := getOptionalUserID(c)
+	summary, err := h.blogService.GetSummary(c.Request.Context(), id, currentUserID)
+	if err != nil {
+		resp.NotFound(c, "blog not found")
+		return
+	}
+	resp.Success(c, summary)
+}
