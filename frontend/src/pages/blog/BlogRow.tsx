@@ -44,15 +44,13 @@ export function BlogRow({ blog }: BlogRowProps) {
                 className="mt-4 text-gray-500 transition-transform group-hover:translate-x-1 group-hover:text-sky-500 dark:text-gray-400"
               />
             </div>
-            {blog.tags && blog.tags.length > 0 && (
-              <div className="mt-1 hidden w-[10rem] shrink-0 flex-col gap-0.5 lg:flex">
-                {blog.tags.map((t) => (
-                  <span key={t.id} className="font-mono text-xs font-medium tracking-widest text-gray-400 uppercase">
-                    {t.name}
-                  </span>
-                ))}
-              </div>
-            )}
+            <div className="mt-1 hidden w-[10rem] shrink-0 flex-col gap-0.5 lg:flex">
+              {blog.tags?.map((t) => (
+                <span key={t.id} className="font-mono text-xs font-medium tracking-widest text-gray-400 uppercase">
+                  {t.name}
+                </span>
+              ))}
+            </div>
           </div>
         </div>
       </Link>

@@ -6,7 +6,7 @@ import type {
   GuestbookForm,
   GuestbookMessage,
 } from '@/types/social'
-import type { TrendingRepo, TrendingResult } from '@/types/trending'
+import type { TrendingResult } from '@/types/trending'
 
 export function listGuestbook(page = 1, page_size = 10) {
   return apiGet<PaginatedData<GuestbookMessage>>('/guestbook', {
