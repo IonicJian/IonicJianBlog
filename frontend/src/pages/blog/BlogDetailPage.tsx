@@ -156,15 +156,15 @@ export function BlogDetailPage() {
 
   return (
     <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 md:py-12">
-      <div className="grid gap-8 lg:grid-cols-[200px_1fr] lg:gap-0">
-        <div className="hidden lg:block lg:pr-8">
-          <div className="sticky top-20">
+      <div className="grid gap-8 lg:grid-cols-[1fr_minmax(0,768px)_1fr] lg:gap-0">
+        <div className="hidden lg:block">
+          <div className="sticky top-20 ml-auto w-[200px] pr-8">
             <TableOfContents containerRef={articleRef} />
           </div>
         </div>
         <article
           ref={articleRef}
-          className="mx-auto max-w-3xl lg:border-l lg:border-gray-950/5 lg:pl-12 dark:lg:border-white/10"
+          className="w-full lg:border-l lg:border-gray-950/5 lg:pl-12 dark:lg:border-white/10"
           onMouseUp={handleSelection}
         >
           <div className="flex items-center justify-between pb-6">
@@ -228,6 +228,7 @@ export function BlogDetailPage() {
             />
           </div>
         </article>
+        <div className="hidden lg:block" />
       </div>
 
       <section id="comments" className="mx-auto mt-12 max-w-3xl">
