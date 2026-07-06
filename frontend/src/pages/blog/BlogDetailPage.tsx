@@ -1,4 +1,10 @@
-import { ArrowLeft, Eye, PencilSimple, Quotes, Sparkle } from "@phosphor-icons/react";
+import {
+  ArrowLeft,
+  Eye,
+  PencilSimple,
+  Quotes,
+  Sparkle,
+} from "@phosphor-icons/react";
 import { useEffect, useRef, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { getBlog, incrementView } from "@/api/blogs";
@@ -157,7 +163,7 @@ export function BlogDetailPage() {
   return (
     <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 md:py-12">
       <div className="grid gap-8 lg:grid-cols-[280px_1fr_280px] lg:gap-0">
-        <div className="hidden lg:block lg:pr-8">
+        <div className="hidden lg:block lg:pl-8">
           <div className="sticky top-32 max-h-[calc(100vh-10rem)] overflow-y-auto">
             <TableOfContents containerRef={articleRef} />
           </div>
@@ -168,91 +174,91 @@ export function BlogDetailPage() {
             className="w-full px-6"
             onMouseUp={handleSelection}
           >
-          <div className="flex items-center justify-between pb-6">
-            <button
-              type="button"
-              onClick={() => navigate(-1)}
-              className="flex items-center gap-1 text-sm text-muted-foreground transition-colors hover:text-foreground"
-            >
-              <ArrowLeft size={16} weight="regular" />
-              返回
-            </button>
-            {user?.role === "admin" && (
-              <Button asChild variant="outline" size="sm">
-                <Link to={`/admin/blogs/${blog.id}/edit`}>
-                  <PencilSimple size={14} weight="regular" />
-                  编辑
-                </Link>
-              </Button>
-            )}
-          </div>
-          <h1 className="text-5xl font-medium tracking-tighter text-balance text-gray-950 md:text-6xl dark:text-white">
-            {blog.title}
-          </h1>
-          <div className="mt-6 flex flex-wrap items-center gap-3 text-xs text-gray-500 dark:text-gray-400">
-            <span className="font-mono font-medium tracking-widest uppercase tabular-nums">
-              {formatDate(blog.created_at)}
-            </span>
-            <span className="flex items-center gap-1 tabular-nums">
-              <Eye size={14} weight="regular" />
-              {blog.view_count}
-            </span>
-            {blog.tags?.map((t) => (
-              <span
-                key={t.id}
-                className="rounded-full bg-gray-950/5 px-2 py-0.5 dark:bg-white/10"
+            <div className="flex items-center justify-between pb-6">
+              <button
+                type="button"
+                onClick={() => navigate(-1)}
+                className="flex items-center gap-1 text-sm text-muted-foreground transition-colors hover:text-foreground"
               >
-                {t.name}
-              </span>
-            ))}
-          </div>
-          {blog.ai_summary && (
-            <div className="mt-8 rounded-xl border border-amber-500/20 bg-amber-50/50 px-5 py-4 dark:bg-amber-950/10">
-              <div className="flex items-center gap-2 text-sm font-medium text-amber-700 dark:text-amber-400">
-                <Sparkle size={14} weight="fill" />
-                AI 总结
-              </div>
-              <p className="mt-2 whitespace-pre-line text-sm leading-7 text-gray-700 dark:text-gray-300">
-                {blog.ai_summary}
-              </p>
+                <ArrowLeft size={16} weight="regular" />
+                返回
+              </button>
+              {user?.role === "admin" && (
+                <Button asChild variant="outline" size="sm">
+                  <Link to={`/admin/blogs/${blog.id}/edit`}>
+                    <PencilSimple size={14} weight="regular" />
+                    编辑
+                  </Link>
+                </Button>
+              )}
             </div>
-          )}
-          <div className="mt-10 border-t border-gray-950/5 pt-10 dark:border-white/10">
-            <MarkdownRenderer content={blog.content} />
-          </div>
-          <div className="mt-8 flex justify-center border-t border-border pt-6">
-            <LikeButton
-              count={likeCount}
-              liked={liked}
-              onToggle={handleLikeToggle}
-              size={20}
+            <h1 className="text-5xl font-medium tracking-tighter text-balance text-gray-950 md:text-6xl dark:text-white">
+              {blog.title}
+            </h1>
+            <div className="mt-6 flex flex-wrap items-center gap-3 text-xs text-gray-500 dark:text-gray-400">
+              <span className="font-mono font-medium tracking-widest uppercase tabular-nums">
+                {formatDate(blog.created_at)}
+              </span>
+              <span className="flex items-center gap-1 tabular-nums">
+                <Eye size={14} weight="regular" />
+                {blog.view_count}
+              </span>
+              {blog.tags?.map((t) => (
+                <span
+                  key={t.id}
+                  className="rounded-full bg-gray-950/5 px-2 py-0.5 dark:bg-white/10"
+                >
+                  {t.name}
+                </span>
+              ))}
+            </div>
+            {blog.ai_summary && (
+              <div className="mt-8 rounded-xl border border-amber-500/20 bg-amber-50/50 px-5 py-4 dark:bg-amber-950/10">
+                <div className="flex items-center gap-2 text-sm font-medium text-amber-700 dark:text-amber-400">
+                  <Sparkle size={14} weight="fill" />
+                  AI 总结
+                </div>
+                <p className="mt-2 whitespace-pre-line text-sm leading-7 text-gray-700 dark:text-gray-300">
+                  {blog.ai_summary}
+                </p>
+              </div>
+            )}
+            <div className="mt-10 border-t border-gray-950/5 pt-10 dark:border-white/10">
+              <MarkdownRenderer content={blog.content} />
+            </div>
+            <div className="mt-8 flex justify-center border-t border-border pt-6">
+              <LikeButton
+                count={likeCount}
+                liked={liked}
+                onToggle={handleLikeToggle}
+                size={20}
+              />
+            </div>
+          </article>
+          <section id="comments" className="mt-12 w-full">
+            <h2 className="pb-6 text-2xl font-semibold tracking-tight">评论</h2>
+            <div id="comment-form" className="pb-8">
+              <CommentForm
+                blogId={blog.id}
+                replyTo={replyTo}
+                quote={quote}
+                onSubmitted={() => setCommentRefresh((k) => k + 1)}
+                onCancelReply={() => setReplyTo(null)}
+                onCancelQuote={() => setQuote(null)}
+              />
+            </div>
+            <CommentList
+              blogId={blog.id}
+              refreshKey={commentRefresh}
+              onReply={(c) => {
+                setReplyTo(c);
+                document
+                  .getElementById("comment-form")
+                  ?.scrollIntoView({ behavior: "smooth" });
+              }}
+              onChanged={() => setCommentRefresh((k) => k + 1)}
             />
-          </div>
-        </article>
-        <section id="comments" className="mt-12 w-full">
-        <h2 className="pb-6 text-2xl font-semibold tracking-tight">评论</h2>
-        <div id="comment-form" className="pb-8">
-          <CommentForm
-            blogId={blog.id}
-            replyTo={replyTo}
-            quote={quote}
-            onSubmitted={() => setCommentRefresh((k) => k + 1)}
-            onCancelReply={() => setReplyTo(null)}
-            onCancelQuote={() => setQuote(null)}
-          />
-        </div>
-        <CommentList
-          blogId={blog.id}
-          refreshKey={commentRefresh}
-          onReply={(c) => {
-            setReplyTo(c);
-            document
-              .getElementById("comment-form")
-              ?.scrollIntoView({ behavior: "smooth" });
-          }}
-          onChanged={() => setCommentRefresh((k) => k + 1)}
-        />
-      </section>
+          </section>
         </div>
         <div className="hidden lg:block" />
       </div>

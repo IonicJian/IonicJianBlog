@@ -32,7 +32,7 @@ export function TrendingPage() {
           GitHub Trending
         </h1>
         <p className="mt-10 bp-line text-lg text-gray-500 dark:text-gray-400">
-          最近热门的 GitHub 仓库。
+          本周热门 GitHub 仓库
         </p>
         {overallSummary && (
           <div className="mt-8 mx-24 bp-line rounded-xl border border-amber-500/20 bg-amber-50/50 px-5 py-4 dark:bg-amber-950/10">
