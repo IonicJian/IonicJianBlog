@@ -40,7 +40,7 @@ export function TrendingPage() {
               <Sparkle size={14} weight="fill" />
               AI 趋势解读
             </div>
-            <p className="mt-2 text-sm leading-7 text-gray-700 dark:text-gray-300">
+            <p className="mt-2 whitespace-pre-line text-sm leading-7 text-gray-700 dark:text-gray-300">
               {overallSummary}
             </p>
           </div>
@@ -80,7 +80,7 @@ export function TrendingPage() {
                       </p>
                     )}
                     {r.ai_commentary && (
-                      <p className="mt-3 border-l-2 border-amber-400/40 pl-3 text-sm leading-6 text-gray-500 dark:text-gray-400">
+                      <p className="mt-3 whitespace-pre-line border-l-2 border-amber-400/40 pl-3 text-sm leading-6 text-gray-500 dark:text-gray-400">
                         {r.ai_commentary}
                       </p>
                     )}
