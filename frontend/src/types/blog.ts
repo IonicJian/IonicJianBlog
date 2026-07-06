@@ -42,7 +42,6 @@ export interface BlogListItem {
   like_count: number
   liked_by_me: boolean
   tags?: Tag[]
-  ai_summary?: string
 }
 
 export interface BlogListQuery {

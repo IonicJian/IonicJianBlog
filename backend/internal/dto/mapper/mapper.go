@@ -47,9 +47,6 @@ func BlogToListResponse(b *model.Blog) response.BlogListResponse {
 		UpdatedAt:  b.UpdatedAt,
 		LikeCount:  b.LikeCount,
 	}
-	if b.AISummary != nil {
-		r.AISummary = b.AISummary.Summary
-	}
 	if b.Author != nil {
 		u := UserToResponse(b.Author)
 		r.Author = &u

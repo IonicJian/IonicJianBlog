@@ -13,11 +13,6 @@ function formatDate(s: string): string {
   });
 }
 
-function firstParagraph(s?: string): string {
-  if (!s) return "";
-  return s.split(/\n+/)[0]?.trim() || "";
-}
-
 export function BlogRow({ blog }: BlogRowProps) {
   return (
     <div className="bp-line-top px-4 pt-12 sm:px-6">
@@ -36,9 +31,9 @@ export function BlogRow({ blog }: BlogRowProps) {
                 {blog.title}
               </Link>
             </div>
-            {(firstParagraph(blog.ai_summary) || blog.excerpt) && (
+            {blog.excerpt && (
               <p className="mt-6 line-clamp-3 text-xs leading-5 text-gray-600 dark:text-gray-300">
-                {firstParagraph(blog.ai_summary) || blog.excerpt}
+                {blog.excerpt}
               </p>
             )}
             <Link

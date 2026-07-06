@@ -40,7 +40,6 @@ type BlogListResponse struct {
 	LikeCount  int64          `json:"like_count"`
 	LikedByMe  bool           `json:"liked_by_me"`
 	Tags       []*TagResponse `json:"tags,omitempty"`
-	AISummary  string         `json:"ai_summary,omitempty"`
 }
 
 type TagResponse struct {
