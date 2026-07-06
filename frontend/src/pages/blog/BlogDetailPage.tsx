@@ -165,7 +165,7 @@ export function BlogDetailPage() {
         <div>
           <article
             ref={articleRef}
-            className="mx-auto w-full max-w-4xl px-6"
+            className="mx-auto max-w-4xl px-6"
             onMouseUp={handleSelection}
           >
           <div className="flex items-center justify-between pb-6">
