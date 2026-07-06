@@ -18,43 +18,59 @@ export function TableOfContents({
 }: TableOfContentsProps) {
   const [items, setItems] = useState<TocItem[]>([])
   const [activeId, setActiveId] = useState('')
-  const rafRef = useRef<number | null>(null)
+  const headingsRef = useRef<HTMLElement[]>([])
 
   useEffect(() => {
     const container = containerRef.current
     if (!container) return
-    const headings = Array.from(
-      container.querySelectorAll<HTMLElement>('h1, h2, h3, h4'),
-    )
-    const toc: TocItem[] = headings
-      .map((h) => ({
-        id: h.id,
-        text: h.textContent ?? '',
-        level: Number(h.tagName[1]),
-      }))
-      .filter((h) => h.id && h.text)
-    setItems(toc)
 
-    const onScroll = () => {
-      if (rafRef.current) return
-      rafRef.current = requestAnimationFrame(() => {
-        // Pick the last heading whose top is above the header offset;
-        // that is the section currently in view.
-        let current = ''
-        for (const h of headings) {
-          if (h.getBoundingClientRect().top < 120) {
-            current = h.id
+    const collect = () => {
+      const headings = Array.from(
+        container.querySelectorAll<HTMLElement>('h1, h2, h3, h4'),
+      ).filter((h) => h.id && h.textContent)
+      headingsRef.current = headings
+      setItems(
+        headings.map((h) => ({
+          id: h.id,
+          text: h.textContent ?? '',
+          level: Number(h.tagName[1]),
+        })),
+      )
+      return headings
+    }
+
+    const visible = new Set<string>()
+    const observer = new IntersectionObserver(
+      (entries) => {
+        for (const entry of entries) {
+          if (entry.isIntersecting) {
+            visible.add(entry.target.id)
+          } else {
+            visible.delete(entry.target.id)
           }
         }
-        setActiveId(current)
-        rafRef.current = null
-      })
-    }
-    window.addEventListener('scroll', onScroll, { passive: true })
-    onScroll()
+        // Pick the first visible heading (by DOM order = closest to top)
+        const current = headingsRef.current.find((h) => visible.has(h.id))
+        if (current) setActiveId(current.id)
+      },
+      { rootMargin: '-80px 0px 0px 0px', threshold: 0 },
+    )
+
+    const headings = collect()
+    for (const h of headings) observer.observe(h)
+
+    // Re-collect if async content (markdown) renders after mount
+    const mutationObs = new MutationObserver(() => {
+      observer.disconnect()
+      const updated = collect()
+      for (const h of updated) observer.observe(h)
+      visible.clear()
+    })
+    mutationObs.observe(container, { childList: true, subtree: true })
+
     return () => {
-      window.removeEventListener('scroll', onScroll)
-      if (rafRef.current) cancelAnimationFrame(rafRef.current)
+      observer.disconnect()
+      mutationObs.disconnect()
     }
   }, [containerRef])
 

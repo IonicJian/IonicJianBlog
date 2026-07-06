@@ -164,7 +164,7 @@ export function BlogDetailPage() {
         </div>
         <article
           ref={articleRef}
-          className="w-full lg:border-l lg:border-gray-950/5 dark:lg:border-white/10"
+          className="w-full px-6 lg:border-l lg:border-gray-950/5 dark:lg:border-white/10"
           onMouseUp={handleSelection}
         >
           <div className="flex items-center justify-between pb-6">
