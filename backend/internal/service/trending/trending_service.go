@@ -126,12 +126,13 @@ func (s *trendingService) generateOverallSummary(repos []TrendingRepo) string {
 	if s.ai == nil || !s.ai.Available() {
 		return ""
 	}
+	// 精简输入：只传仓库名和语言，减少 token 避免截断
 	var sb strings.Builder
 	for _, r := range repos {
-		sb.WriteString(fmt.Sprintf("- %s (%s): %s\n", r.FullName, r.Language, r.Description))
+		sb.WriteString(fmt.Sprintf("%s (%s)\n", r.FullName, r.Language))
 	}
 	messages := []ai.Message{
-		{Role: "system", Content: "你是 GitHub 趋势分析助手。根据本周 trending 仓库列表，总结当前技术趋势。按 2-3 个方面组织，每个方面单独一段，段落之间用空行分隔。用纯文本，不要 markdown 符号（如 **、#、- 等），不要前言。"},
+		{Role: "system", Content: "你是 GitHub 趋势分析助手。根据本周 trending 仓库列表，先简短一句话概括本周技术趋势和总体特点，然后按领域将仓库大致分为2-3类，每类一句话简述，不必逐个介绍每个仓库。直接输出纯文本，不要前言、不要 markdown 符号（**、#、- 等）。"},
 		{Role: "user", Content: sb.String()},
 	}
 	result, err := s.ai.Complete(context.Background(), messages, 500)
