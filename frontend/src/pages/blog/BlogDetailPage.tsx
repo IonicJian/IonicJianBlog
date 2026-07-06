@@ -158,7 +158,7 @@ export function BlogDetailPage() {
     <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 md:py-12">
       <div className="grid gap-8 lg:grid-cols-[1fr_minmax(0,768px)_1fr] lg:gap-0">
         <div className="hidden lg:block">
-          <div className="sticky top-24 ml-auto max-h-[calc(100vh-8rem)] w-[200px] overflow-y-auto pr-8">
+          <div className="sticky top-32 ml-auto max-h-[calc(100vh-10rem)] w-[200px] overflow-y-auto pr-8">
             <TableOfContents containerRef={articleRef} />
           </div>
         </div>

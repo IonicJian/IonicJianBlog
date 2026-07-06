@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { cn } from '@/lib/utils'
 
 interface TocItem {
@@ -18,6 +18,7 @@ export function TableOfContents({
 }: TableOfContentsProps) {
   const [items, setItems] = useState<TocItem[]>([])
   const [activeId, setActiveId] = useState('')
+  const rafRef = useRef<number | null>(null)
 
   useEffect(() => {
     const container = containerRef.current
@@ -34,16 +35,27 @@ export function TableOfContents({
       .filter((h) => h.id && h.text)
     setItems(toc)
 
-    const observer = new IntersectionObserver(
-      (entries) => {
-        entries.forEach((entry) => {
-          if (entry.isIntersecting) setActiveId(entry.target.id)
-        })
-      },
-      { rootMargin: '-80px 0px -70% 0px', threshold: 0 },
-    )
-    headings.forEach((h) => observer.observe(h))
-    return () => observer.disconnect()
+    const onScroll = () => {
+      if (rafRef.current) return
+      rafRef.current = requestAnimationFrame(() => {
+        // Pick the last heading whose top is above the header offset;
+        // that is the section currently in view.
+        let current = ''
+        for (const h of headings) {
+          if (h.getBoundingClientRect().top < 120) {
+            current = h.id
+          }
+        }
+        setActiveId(current)
+        rafRef.current = null
+      })
+    }
+    window.addEventListener('scroll', onScroll, { passive: true })
+    onScroll()
+    return () => {
+      window.removeEventListener('scroll', onScroll)
+      if (rafRef.current) cancelAnimationFrame(rafRef.current)
+    }
   }, [containerRef])
 
   if (items.length < 2) return null
@@ -60,9 +72,9 @@ export function TableOfContents({
               href={`#${item.id}`}
               style={{ paddingLeft: `${(item.level - 1) * 12 + 12}px` }}
               className={cn(
-                '-ml-px block border-l border-transparent py-1 pr-2 text-xs transition-colors hover:text-foreground',
+                '-ml-px block border-l-2 border-transparent py-1 pr-2 text-xs transition-colors hover:text-foreground',
                 activeId === item.id
-                  ? 'border-primary text-primary'
+                  ? 'border-sky-500 text-sky-500 font-medium'
                   : 'text-muted-foreground',
               )}
             >
