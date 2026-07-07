@@ -1,5 +1,6 @@
 import { ArrowLeft, ArrowRight, MagnifyingGlass } from "@phosphor-icons/react";
 import { useEffect, useState } from "react";
+import { useSearchParams } from "react-router-dom";
 import { listBlogs, listCategories, listTags, searchBlogs } from "@/api/blogs";
 import { Laptop } from "@/components/decorations/Laptop";
 import { Button } from "@/components/ui/button";
@@ -57,16 +58,51 @@ function flattenCategories(cats: Category[]): Category[] {
 }
 
 export function BlogListPage() {
-  const [q, setQ] = useState("");
-  const [sort, setSort] = useState<BlogSort>("latest");
-  const [category, setCategory] = useState("");
-  const [selectedTags, setSelectedTags] = useState<string[]>([]);
-  const [page, setPage] = useState(1);
+  // All list state lives in the URL so it survives navigation to a blog detail
+  // page and back (navigate(-1) restores the exact page/filters).
+  const [searchParams, setSearchParams] = useSearchParams();
+  const q = searchParams.get("q") ?? "";
+  const sort = (searchParams.get("sort") ?? "latest") as BlogSort;
+  const category = searchParams.get("category") ?? "";
+  const tagParam = searchParams.get("tag") ?? "";
+  const selectedTags = tagParam ? tagParam.split(",").filter(Boolean) : [];
+  const page = Math.max(1, Number(searchParams.get("page") ?? "1"));
+
   const [blogs, setBlogs] = useState<BlogListItem[]>([]);
   const [totalPages, setTotalPages] = useState(0);
   const [loading, setLoading] = useState(true);
   const [categories, setCategories] = useState<Category[]>([]);
   const [tags, setTags] = useState<Tag[]>([]);
+
+  // Changing a filter resets to page 1. Uses replace so typing in the search
+  // box doesn't push one history entry per keystroke.
+  const setFilter = (key: string, value: string) => {
+    const next = new URLSearchParams(searchParams);
+    if (value) next.set(key, value);
+    else next.delete(key);
+    next.delete("page");
+    setSearchParams(next, { replace: true });
+  };
+  const setQ = (v: string) => setFilter("q", v);
+  const setSort = (v: BlogSort) => setFilter("sort", v);
+  const setCategory = (v: string) => setFilter("category", v);
+  const toggleTag = (slug: string) => {
+    const next = new URLSearchParams(searchParams);
+    const t = selectedTags.includes(slug)
+      ? selectedTags.filter((x) => x !== slug)
+      : [...selectedTags, slug];
+    if (t.length) next.set("tag", t.join(","));
+    else next.delete("tag");
+    next.delete("page");
+    setSearchParams(next, { replace: true });
+  };
+  // Paging pushes a real history entry so back/forward move between pages.
+  const setPage = (p: number) => {
+    const next = new URLSearchParams(searchParams);
+    if (p > 1) next.set("page", String(p));
+    else next.delete("page");
+    setSearchParams(next);
+  };
 
   useEffect(() => {
     listCategories()
@@ -86,7 +122,7 @@ export function BlogListPage() {
           page,
           page_size: PAGE_SIZE,
           sort,
-          tag: selectedTags.join(",") || undefined,
+          tag: tagParam || undefined,
           category: category || undefined,
         });
     fetcher
@@ -101,17 +137,14 @@ export function BlogListPage() {
     return () => {
       cancelled = true;
     };
-  }, [q, sort, category, selectedTags, page]);
+  }, [q, sort, category, tagParam, page]);
 
+  // Clamp page if a filter change shrank the result set below the current page.
   useEffect(() => {
-    setPage(1);
-  }, [q, sort, category, selectedTags]);
-
-  const toggleTag = (slug: string) => {
-    setSelectedTags((prev) =>
-      prev.includes(slug) ? prev.filter((t) => t !== slug) : [...prev, slug],
-    );
-  };
+    if (totalPages > 0 && page > totalPages) {
+      setPage(totalPages);
+    }
+  }, [totalPages, page]);
 
   const flat = flattenCategories(categories);
   const chip = (active: boolean) =>
