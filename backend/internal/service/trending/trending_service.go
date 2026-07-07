@@ -85,7 +85,11 @@ func (s *trendingService) Refresh() {
 
 	s.mu.Lock()
 	s.cache = repos
-	s.overallSummary = overall
+	// Keep the previous summary if the new one failed (empty), so a transient
+	// AI failure doesn't wipe the cached summary until the next refresh.
+	if overall != "" {
+		s.overallSummary = overall
+	}
 	s.mu.Unlock()
 	log.Info().Int("count", len(repos)).Msg("github trending refreshed")
 }
@@ -96,11 +100,16 @@ func (s *trendingService) generateCommentaries(repos []TrendingRepo) {
 	if s.ai == nil || !s.ai.Available() {
 		return
 	}
+	// Limit concurrency to avoid triggering AI provider rate limits, which
+	// would also cause the subsequent overall-summary call to fail.
+	sem := make(chan struct{}, 5)
 	var wg sync.WaitGroup
 	for i := range repos {
 		wg.Add(1)
 		go func(idx int) {
 			defer wg.Done()
+			sem <- struct{}{}
+			defer func() { <-sem }()
 			repos[idx].AICommentary = s.commentRepo(repos[idx])
 		}(i)
 	}
