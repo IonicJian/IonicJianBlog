@@ -144,12 +144,17 @@ func (s *trendingService) generateOverallSummary(repos []TrendingRepo) string {
 		{Role: "system", Content: "你是 GitHub 趋势分析助手。根据本周 trending 仓库列表，先简短一句话概括本周技术趋势和总体特点，然后按领域将仓库大致分为2-3类，每类一句话简述，不必逐个介绍每个仓库。直接输出纯文本，不要前言、不要 markdown 符号（**、#、- 等）。"},
 		{Role: "user", Content: sb.String()},
 	}
-	result, err := s.ai.Complete(context.Background(), messages, 500)
+	result, err := s.ai.Complete(context.Background(), messages, 800)
 	if err != nil {
 		log.Warn().Err(err).Msg("ai overall summary failed")
 		return ""
 	}
-	return strings.TrimSpace(result.Text)
+	summary := strings.TrimSpace(result.Text)
+	if summary == "" {
+		log.Warn().Int("tokens_used", result.TokensUsed).Msg("ai overall summary returned empty text")
+		return ""
+	}
+	return summary
 }
 
 func (s *trendingService) fetchTrending() ([]TrendingRepo, error) {
