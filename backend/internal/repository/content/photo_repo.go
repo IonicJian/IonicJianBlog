@@ -9,6 +9,7 @@ import (
 
 type PhotoRepository interface {
 	List(ctx context.Context) ([]*model.Photo, error)
+	GetByID(ctx context.Context, id int64) (*model.Photo, error)
 	Create(ctx context.Context, p *model.Photo) error
 	Delete(ctx context.Context, id int64) error
 }
@@ -38,6 +39,17 @@ func (r *photoRepo) List(ctx context.Context) ([]*model.Photo, error) {
 		photos = append(photos, p)
 	}
 	return photos, nil
+}
+
+func (r *photoRepo) GetByID(ctx context.Context, id int64) (*model.Photo, error) {
+	p := &model.Photo{}
+	err := r.db.QueryRow(ctx,
+		`SELECT id, url, title, sort_order, created_at FROM photos WHERE id=$1`, id,
+	).Scan(&p.ID, &p.URL, &p.Title, &p.SortOrder, &p.CreatedAt)
+	if err != nil {
+		return nil, err
+	}
+	return p, nil
 }
 
 func (r *photoRepo) Create(ctx context.Context, p *model.Photo) error {
