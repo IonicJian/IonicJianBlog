@@ -137,7 +137,7 @@ func (s *trendingService) generateOverallSummary(repos []TrendingRepo) string {
 	}
 	result, err := s.ai.Complete(context.Background(), messages, 500)
 	if err != nil {
-		log.Debug().Err(err).Msg("ai overall summary failed")
+		log.Warn().Err(err).Msg("ai overall summary failed")
 		return ""
 	}
 	return strings.TrimSpace(result.Text)
