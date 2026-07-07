@@ -168,7 +168,7 @@ export function BlogDetailPage() {
             <TableOfContents containerRef={articleRef} />
           </div>
         </div>
-        <div>
+        <div className="min-w-0">
           <article
             ref={articleRef}
             className="w-full px-6"

@@ -25,14 +25,20 @@ function getHighlighter(): Promise<Highlighter> {
       ],
       langs: [
         import('@shikijs/langs/bash'),
+        import('@shikijs/langs/c'),
+        import('@shikijs/langs/cpp'),
         import('@shikijs/langs/css'),
+        import('@shikijs/langs/diff'),
         import('@shikijs/langs/go'),
         import('@shikijs/langs/html'),
+        import('@shikijs/langs/java'),
         import('@shikijs/langs/javascript'),
         import('@shikijs/langs/json'),
         import('@shikijs/langs/jsx'),
         import('@shikijs/langs/markdown'),
+        import('@shikijs/langs/powershell'),
         import('@shikijs/langs/python'),
+        import('@shikijs/langs/shell'),
         import('@shikijs/langs/sql'),
         import('@shikijs/langs/tsx'),
         import('@shikijs/langs/typescript'),
@@ -106,11 +112,11 @@ function CodeBlock({
       </div>
       {html ? (
         <div
-          className="overflow-x-auto text-sm"
+          className="[&>pre]:whitespace-pre-wrap [&>pre]:break-words text-sm"
           dangerouslySetInnerHTML={{ __html: html }}
         />
       ) : (
-        <pre className="shiki overflow-x-auto p-4 text-sm">
+        <pre className="shiki whitespace-pre-wrap break-words p-4 text-sm">
           <code>{code}</code>
         </pre>
       )}
@@ -187,7 +193,7 @@ export function MarkdownRenderer({ content, className }: MarkdownRendererProps) 
       const match = /language-(\w+)/.exec(cls || '')
       const text = String(children).replace(/\n$/, '')
       if (match) {
-        const lang = match[1]
+        const lang = match[1].toLowerCase()
         let html: string | null = null
         if (highlighter) {
           try {
