@@ -100,6 +100,7 @@ func (h *Handler) Update(c *gin.Context) {
 	if req.CoverImage != "" { params.CoverImage = &req.CoverImage }
 	if req.Status != "" { params.Status = &req.Status }
 	if req.IsTop != nil { params.IsTop = req.IsTop }
+	params.CategoryID = req.CategoryID
 	blog, err := h.blogService.Update(c.Request.Context(), id, params)
 	if err != nil { resp.InternalError(c, err.Error()); return }
 	resp.Success(c, mapper.BlogToDetailResponse(blog))

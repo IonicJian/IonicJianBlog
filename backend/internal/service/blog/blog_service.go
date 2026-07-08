@@ -82,6 +82,7 @@ func (s *blogService) Create(ctx context.Context, userID int64, params CreatePar
 		CoverImage:  params.CoverImage,
 		Status:      params.Status,
 		IsTop:       params.IsTop,
+		CategoryID:  params.CategoryID,
 	}
 
 	if err := s.blogRepo.Create(ctx, blog, params.TagIDs); err != nil {
@@ -154,6 +155,9 @@ func (s *blogService) Update(ctx context.Context, id int64, params UpdateParams)
 	}
 	if params.IsTop != nil {
 		blog.IsTop = *params.IsTop
+	}
+	if params.CategoryID != nil {
+		blog.CategoryID = params.CategoryID
 	}
 
 	if err := s.blogRepo.Update(ctx, blog, params.TagIDs); err != nil {

@@ -28,8 +28,8 @@ func (h *GuestbookHandler) List(c *gin.Context) {
 
 func (h *GuestbookHandler) Create(c *gin.Context) {
 	var req struct {
-		Nickname string `json:"nickname" binding:"max=128"`
-		Content  string `json:"content" binding:"required,min=1,max=2000"`
+		Content   string `json:"content" binding:"required,min=1,max=2000"`
+		Anonymous bool   `json:"anonymous"`
 	}
 	if err := c.ShouldBindJSON(&req); err != nil { resp.BadRequest(c, err.Error()); return }
 	var userID *int64
@@ -37,7 +37,7 @@ func (h *GuestbookHandler) Create(c *gin.Context) {
 		id := uid.(int64)
 		userID = &id
 	}
-	msg, err := h.service.Create(c.Request.Context(), userID, req.Nickname, req.Content)
+	msg, err := h.service.Create(c.Request.Context(), userID, req.Anonymous, req.Content)
 	if err != nil { resp.InternalError(c, err.Error()); return }
 	resp.Success(c, msg)
 }

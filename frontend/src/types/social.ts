@@ -33,5 +33,5 @@ export interface GuestbookMessage {
 
 export interface GuestbookForm {
   content: string
-  nickname?: string
+  anonymous?: boolean
 }

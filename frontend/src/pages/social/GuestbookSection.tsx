@@ -41,7 +41,7 @@ export function GuestbookSection() {
     try {
       await createGuestbook({
         content: content.trim(),
-        nickname: anonymous ? '匿名访客' : undefined,
+        anonymous,
       })
       setContent('')
       toast.success('留言已发布')

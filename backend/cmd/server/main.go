@@ -97,7 +97,7 @@ func main() {
 	commentService := socialS.NewCommentService(commentRepo)
 	likeService := socialS.NewLikeService(likeRepo)
 	friendLinkService := contentS.NewFriendLinkService(friendLinkRepo)
-	guestbookService := socialS.NewGuestbookService(guestbookRepo)
+	guestbookService := socialS.NewGuestbookService(guestbookRepo, userRepo)
 	trendingService := trendingS.New(aiClient)
 	categoryService := contentS.NewCategoryService(categoryRepo)
 	photoService := contentS.NewPhotoService(photoRepo)
